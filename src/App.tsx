@@ -1,12 +1,12 @@
 import './App.css'
 
-function App() {
+function App(): JSX.Element {
   return (
     <div className="min-h-screen bg-neutral-50">
       <div className="container mx-auto px-5 py-8 max-w-6xl">
         <header className="mb-8">
           <h1 className="text-4xl font-medium text-neutral-900 mb-3">
-            Stream Profile Manager
+            Scratch My Twitch
           </h1>
           <p className="text-lg text-neutral-600">
             Manage your streaming profiles with ease
