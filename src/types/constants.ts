@@ -11,11 +11,11 @@ export const APP_CONFIG = {
   /** Application name */
   NAME: 'Scratch My Twitch',
   /** Application version */
-  VERSION: '1.0.0',
+  VERSION: '0.1.0',
   /** Application description */
   DESCRIPTION: 'One-click stream profile management for Twitch streamers',
   /** GitHub repository URL */
-  REPOSITORY: 'https://github.com/afroprose/scratch-my-twitch'
+  REPOSITORY: 'https://github.com/campbellkearns/scratch-my-twitch'
 } as const;
 
 /**
