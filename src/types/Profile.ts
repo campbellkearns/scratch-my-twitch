@@ -18,21 +18,10 @@ export interface StreamCategory {
 }
 
 /**
- * Tags array with compile-time length enforcement
- * Twitch allows maximum 10 tags per stream
+ * Tags array for stream categorization
+ * Twitch allows maximum 10 tags per stream (enforced at validation)
  */
-export type StreamTags = readonly [
-  string?,
-  string?,
-  string?,
-  string?,
-  string?,
-  string?,
-  string?,
-  string?,
-  string?,
-  string?
-] & { length: 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10 };
+export type StreamTags = string[];
 
 /**
  * Main Stream Profile entity
