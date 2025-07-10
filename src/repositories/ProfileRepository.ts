@@ -1,111 +1,198 @@
-import type { Profile, CreateProfileDto, UpdateProfileDto } from '@/types/Profile'
-import type { ApiResponse } from '@/types'
-import { getDB } from '@/lib/db/indexedDB'
-import { generateId } from '@/lib/utils'
+/**
+ * Profile Repository
+ * 
+ * Handles all profile data operations using the repository pattern.
+ * Provides clean separation between UI and data layer with comprehensive
+ * error handling and offline-first operations.
+ */
+
+import type { 
+  StreamProfile, 
+  CreateProfileInput, 
+  UpdateProfileInput,
+  ProfileValidationResult
+} from '@/types/Profile';
+import { 
+  createProfile, 
+  updateProfile, 
+  validateProfile,
+  generateUUID,
+  searchProfiles,
+  sortProfiles
+} from '@/types/ProfileUtils';
+import { STORAGE_KEYS, ERROR_CODES, SUCCESS_MESSAGES } from '@/types/constants';
+import { getDB } from '@/lib/db/indexedDB';
 
 /**
- * Profile Repository - handles all profile data operations
- * Implements the repository pattern for clean separation of concerns
+ * Repository result type for consistent error handling
+ */
+export interface RepositoryResult<T = void> {
+  success: boolean;
+  data?: T;
+  error?: {
+    message: string;
+    code: string;
+    details?: unknown;
+  };
+}
+
+/**
+ * Profile Repository Implementation
  */
 export class ProfileRepository {
-  private readonly storeName = 'profiles'
+  private readonly storeName = STORAGE_KEYS.PROFILES_STORE;
 
   /**
-   * Get all profiles, sorted by creation date (newest first)
+   * Get all profiles, sorted by most recently updated
    */
-  async getAll(): Promise<ApiResponse<Profile[]>> {
+  async getAll(): Promise<RepositoryResult<StreamProfile[]>> {
     try {
-      const db = await getDB()
-      const profiles = await db.getAll<Profile>(this.storeName)
+      const db = await getDB();
+      const profiles = await db.getAll<StreamProfile>(this.storeName);
       
-      // Sort by creation date, newest first
-      const sortedProfiles = profiles.sort((a, b) => 
-        new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
-      )
+      // Convert date strings back to Date objects (IndexedDB serialization)
+      const processedProfiles = profiles.map(profile => ({
+        ...profile,
+        createdAt: new Date(profile.createdAt),
+        updatedAt: new Date(profile.updatedAt)
+      }));
+
+      // Sort by most recently updated first
+      const sortedProfiles = sortProfiles(processedProfiles, 'updatedAt', 'desc');
 
       return {
         success: true,
         data: sortedProfiles
-      }
+      };
     } catch (error) {
       return {
         success: false,
         error: {
           message: 'Failed to fetch profiles',
+          code: ERROR_CODES.STORAGE_ERROR,
           details: error
         }
-      }
+      };
     }
   }
 
   /**
    * Get a profile by ID
    */
-  async getById(id: string): Promise<ApiResponse<Profile>> {
+  async getById(id: string): Promise<RepositoryResult<StreamProfile>> {
     try {
-      const db = await getDB()
-      const profile = await db.get<Profile>(this.storeName, id)
+      if (!id) {
+        return {
+          success: false,
+          error: {
+            message: 'Profile ID is required',
+            code: ERROR_CODES.VALIDATION_ERROR
+          }
+        };
+      }
+
+      const db = await getDB();
+      const profile = await db.get<StreamProfile>(this.storeName, id);
 
       if (!profile) {
         return {
           success: false,
           error: {
             message: 'Profile not found',
-            code: 'NOT_FOUND'
+            code: 'PROFILE_NOT_FOUND'
           }
-        }
+        };
       }
+
+      // Convert date strings back to Date objects
+      const processedProfile = {
+        ...profile,
+        createdAt: new Date(profile.createdAt),
+        updatedAt: new Date(profile.updatedAt)
+      };
 
       return {
         success: true,
-        data: profile
-      }
+        data: processedProfile
+      };
     } catch (error) {
       return {
         success: false,
         error: {
           message: 'Failed to fetch profile',
+          code: ERROR_CODES.STORAGE_ERROR,
           details: error
         }
-      }
+      };
     }
   }
 
   /**
    * Create a new profile
    */
-  async create(profileData: CreateProfileDto): Promise<ApiResponse<Profile>> {
+  async create(profileData: CreateProfileInput): Promise<RepositoryResult<StreamProfile>> {
     try {
-      // Validate required fields
-      const validation = this.validateProfileData(profileData)
-      if (!validation.success) {
-        return validation
-      }
-
-      const now = new Date()
-      const profile: Profile = {
-        id: generateId(),
-        ...profileData,
-        createdAt: now,
-        updatedAt: now
-      }
-
-      const db = await getDB()
-      await db.add(this.storeName, profile)
-
-      return {
-        success: true,
-        data: profile
-      }
-    } catch (error) {
-      // Handle unique constraint violations or other DB errors
-      if (error instanceof Error && error.name === 'ConstraintError') {
+      // Validate input data
+      const validation = validateProfile(profileData);
+      if (!validation.isValid) {
         return {
           success: false,
           error: {
-            message: 'A profile with this name already exists',
-            code: 'DUPLICATE_NAME'
+            message: validation.errors.map(e => e.message).join(', '),
+            code: ERROR_CODES.VALIDATION_ERROR,
+            details: validation.errors
           }
+        };
+      }
+
+      // Check for duplicate names
+      const existingProfiles = await this.getAll();
+      if (existingProfiles.success && existingProfiles.data) {
+        const duplicateName = existingProfiles.data.find(
+          p => p.name.toLowerCase().trim() === profileData.name.toLowerCase().trim()
+        );
+        if (duplicateName) {
+          return {
+            success: false,
+            error: {
+              message: 'A profile with this name already exists',
+              code: 'DUPLICATE_NAME'
+            }
+          };
+        }
+      }
+
+      // Create the profile using utility function
+      const newProfile = createProfile(profileData);
+
+      // Save to database
+      const db = await getDB();
+      await db.add(this.storeName, newProfile);
+
+      return {
+        success: true,
+        data: newProfile
+      };
+    } catch (error) {
+      // Handle specific IndexedDB errors
+      if (error instanceof Error) {
+        if (error.name === 'ConstraintError') {
+          return {
+            success: false,
+            error: {
+              message: 'A profile with this ID already exists',
+              code: 'DUPLICATE_ID'
+            }
+          };
+        }
+        if (error.name === 'QuotaExceededError') {
+          return {
+            success: false,
+            error: {
+              message: 'Storage quota exceeded',
+              code: ERROR_CODES.STORAGE_QUOTA_EXCEEDED
+            }
+          };
         }
       }
 
@@ -113,217 +200,260 @@ export class ProfileRepository {
         success: false,
         error: {
           message: 'Failed to create profile',
+          code: ERROR_CODES.STORAGE_ERROR,
           details: error
         }
-      }
+      };
     }
   }
 
   /**
    * Update an existing profile
    */
-  async update(id: string, updates: UpdateProfileDto): Promise<ApiResponse<Profile>> {
+  async update(id: string, updates: UpdateProfileInput): Promise<RepositoryResult<StreamProfile>> {
     try {
-      // First, get the existing profile
-      const existingResult = await this.getById(id)
+      // Get existing profile
+      const existingResult = await this.getById(id);
       if (!existingResult.success || !existingResult.data) {
-        return existingResult
+        return existingResult;
       }
 
-      // Validate updates
-      const validation = this.validateProfileData(updates, true)
-      if (!validation.success) {
-        return validation
+      // Create updated profile data for validation
+      const updatedData: CreateProfileInput = {
+        name: updates.name ?? existingResult.data.name,
+        description: updates.description ?? existingResult.data.description,
+        category: updates.category ?? existingResult.data.category,
+        title: updates.title ?? existingResult.data.title,
+        tags: updates.tags ?? existingResult.data.tags
+      };
+
+      // Validate the updated data
+      const validation = validateProfile(updatedData);
+      if (!validation.isValid) {
+        return {
+          success: false,
+          error: {
+            message: validation.errors.map(e => e.message).join(', '),
+            code: ERROR_CODES.VALIDATION_ERROR,
+            details: validation.errors
+          }
+        };
       }
 
-      const updatedProfile: Profile = {
-        ...existingResult.data,
-        ...updates,
-        updatedAt: new Date()
+      // Check for duplicate names (excluding current profile)
+      if (updates.name && updates.name !== existingResult.data.name) {
+        const existingProfiles = await this.getAll();
+        if (existingProfiles.success && existingProfiles.data) {
+          const duplicateName = existingProfiles.data.find(
+            p => p.id !== id && p.name.toLowerCase().trim() === updates.name!.toLowerCase().trim()
+          );
+          if (duplicateName) {
+            return {
+              success: false,
+              error: {
+                message: 'A profile with this name already exists',
+                code: 'DUPLICATE_NAME'
+              }
+            };
+          }
+        }
       }
 
-      const db = await getDB()
-      await db.put(this.storeName, updatedProfile)
+      // Create updated profile using utility function
+      const updatedProfile = updateProfile(existingResult.data, updates);
+
+      // Save to database
+      const db = await getDB();
+      await db.put(this.storeName, updatedProfile);
 
       return {
         success: true,
         data: updatedProfile
-      }
+      };
     } catch (error) {
       return {
         success: false,
         error: {
           message: 'Failed to update profile',
+          code: ERROR_CODES.STORAGE_ERROR,
           details: error
         }
-      }
+      };
     }
   }
 
   /**
    * Delete a profile
    */
-  async delete(id: string): Promise<ApiResponse<void>> {
+  async delete(id: string): Promise<RepositoryResult<void>> {
     try {
-      // Check if profile exists first
-      const existingResult = await this.getById(id)
+      // Check if profile exists
+      const existingResult = await this.getById(id);
       if (!existingResult.success) {
         return {
           success: false,
-          error: {
-            message: 'Profile not found',
-            code: 'NOT_FOUND'
-          }
-        }
+          error: existingResult.error
+        };
       }
 
-      const db = await getDB()
-      await db.delete(this.storeName, id)
+      // Delete from database
+      const db = await getDB();
+      await db.delete(this.storeName, id);
 
       return {
         success: true
-      }
+      };
     } catch (error) {
       return {
         success: false,
         error: {
           message: 'Failed to delete profile',
+          code: ERROR_CODES.STORAGE_ERROR,
           details: error
         }
-      }
+      };
     }
   }
 
   /**
-   * Search profiles by name
+   * Search profiles by query
    */
-  async searchByName(query: string): Promise<ApiResponse<Profile[]>> {
+  async search(query: string): Promise<RepositoryResult<StreamProfile[]>> {
     try {
-      const allProfilesResult = await this.getAll()
+      const allProfilesResult = await this.getAll();
       if (!allProfilesResult.success || !allProfilesResult.data) {
-        return allProfilesResult
+        return allProfilesResult;
       }
 
-      const filteredProfiles = allProfilesResult.data.filter(profile =>
-        profile.name.toLowerCase().includes(query.toLowerCase())
-      )
+      const results = searchProfiles(allProfilesResult.data, query);
 
       return {
         success: true,
-        data: filteredProfiles
-      }
+        data: results
+      };
     } catch (error) {
       return {
         success: false,
         error: {
           message: 'Failed to search profiles',
+          code: ERROR_CODES.STORAGE_ERROR,
           details: error
         }
-      }
+      };
     }
   }
 
   /**
-   * Validate profile data
+   * Get profiles by category
    */
-  private validateProfileData(
-    data: CreateProfileDto | UpdateProfileDto, 
-    isUpdate = false
-  ): ApiResponse<void> {
-    const errors: string[] = []
-
-    // Name validation
-    if (!isUpdate || data.name !== undefined) {
-      if (!data.name || data.name.trim().length === 0) {
-        errors.push('Profile name is required')
-      } else if (data.name.trim().length > 50) {
-        errors.push('Profile name must be 50 characters or less')
+  async getByCategory(categoryId: string): Promise<RepositoryResult<StreamProfile[]>> {
+    try {
+      const allProfilesResult = await this.getAll();
+      if (!allProfilesResult.success || !allProfilesResult.data) {
+        return allProfilesResult;
       }
-    }
 
-    // Category validation
-    if (!isUpdate || data.category !== undefined) {
-      if (!data.category || !data.category.id || !data.category.name) {
-        errors.push('Stream category is required')
-      }
-    }
+      const results = allProfilesResult.data.filter(
+        profile => profile.category.id === categoryId
+      );
 
-    // Title validation
-    if (!isUpdate || data.title !== undefined) {
-      if (!data.title || data.title.trim().length === 0) {
-        errors.push('Stream title is required')
-      } else if (data.title.trim().length > 140) {
-        errors.push('Stream title must be 140 characters or less')
-      }
-    }
-
-    // Tags validation
-    if (!isUpdate || data.tags !== undefined) {
-      if (!Array.isArray(data.tags)) {
-        errors.push('Tags must be an array')
-      } else if (data.tags.length > 10) {
-        errors.push('Maximum 10 tags allowed')
-      } else {
-        const invalidTags = data.tags.filter(tag => 
-          typeof tag !== 'string' || tag.trim().length === 0 || tag.length > 25
-        )
-        if (invalidTags.length > 0) {
-          errors.push('Each tag must be a non-empty string of 25 characters or less')
-        }
-      }
-    }
-
-    if (errors.length > 0) {
+      return {
+        success: true,
+        data: results
+      };
+    } catch (error) {
       return {
         success: false,
         error: {
-          message: errors.join(', '),
-          code: 'VALIDATION_ERROR'
+          message: 'Failed to fetch profiles by category',
+          code: ERROR_CODES.STORAGE_ERROR,
+          details: error
         }
-      }
+      };
     }
-
-    return { success: true }
   }
 
   /**
    * Get profile count
    */
-  async getCount(): Promise<ApiResponse<number>> {
+  async getCount(): Promise<RepositoryResult<number>> {
     try {
-      const allProfilesResult = await this.getAll()
+      const allProfilesResult = await this.getAll();
       if (!allProfilesResult.success || !allProfilesResult.data) {
         return {
           success: false,
-          error: allProfilesResult.error || { message: 'Failed to get profile count' }
-        }
+          error: allProfilesResult.error || { message: 'Failed to count profiles', code: ERROR_CODES.STORAGE_ERROR }
+        };
       }
 
       return {
         success: true,
         data: allProfilesResult.data.length
-      }
+      };
     } catch (error) {
       return {
         success: false,
         error: {
-          message: 'Failed to get profile count',
+          message: 'Failed to count profiles',
+          code: ERROR_CODES.STORAGE_ERROR,
           details: error
         }
-      }
+      };
+    }
+  }
+
+  /**
+   * Clear all profiles (useful for testing/reset)
+   */
+  async deleteAll(): Promise<RepositoryResult<void>> {
+    try {
+      const db = await getDB();
+      await db.clear(this.storeName);
+
+      return {
+        success: true
+      };
+    } catch (error) {
+      return {
+        success: false,
+        error: {
+          message: 'Failed to clear profiles',
+          code: ERROR_CODES.STORAGE_ERROR,
+          details: error
+        }
+      };
+    }
+  }
+
+  /**
+   * Check if repository is ready
+   */
+  async isReady(): Promise<boolean> {
+    try {
+      const db = await getDB();
+      return db.isReady();
+    } catch {
+      return false;
     }
   }
 }
 
 // Singleton instance
-let repositoryInstance: ProfileRepository | null = null
+let repositoryInstance: ProfileRepository | null = null;
 
 /**
  * Get the profile repository instance
  */
 export const getProfileRepository = (): ProfileRepository => {
   if (!repositoryInstance) {
-    repositoryInstance = new ProfileRepository()
+    repositoryInstance = new ProfileRepository();
   }
-  return repositoryInstance
-}
+  return repositoryInstance;
+};
+
+/**
+ * Reset the repository instance (useful for testing)
+ */
+export const resetProfileRepository = (): void => {
+  repositoryInstance = null;
+};
