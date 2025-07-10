@@ -1,185 +1,247 @@
-import { useState, useEffect, useCallback } from 'react'
-import type { Profile, CreateProfileDto, UpdateProfileDto } from '@/types/Profile'
-import type { LoadingState } from '@/types'
-import { getProfileRepository } from '@/repositories/ProfileRepository'
+/**
+ * Profile Management Hooks
+ * 
+ * React hooks for managing stream profiles with comprehensive error handling,
+ * loading states, and offline-first operations.
+ */
+
+import { useState, useEffect, useCallback, useMemo } from 'react';
+import type { StreamProfile, CreateProfileInput, UpdateProfileInput } from '@/types/Profile';
+import { getProfileRepository, type RepositoryResult } from '@/repositories/ProfileRepository';
+import { processTitle } from '@/types/ProfileUtils';
 
 /**
- * Custom hook for managing profiles
- * Provides CRUD operations with loading states and error handling
+ * Loading state interface
+ */
+interface LoadingState {
+  isLoading: boolean;
+  error: string | null;
+}
+
+/**
+ * Main profiles management hook
+ * 
+ * Provides comprehensive CRUD operations for stream profiles with optimistic updates,
+ * error handling, and local state management.
  */
 export const useProfiles = () => {
-  const [profiles, setProfiles] = useState<Profile[]>([])
+  const [profiles, setProfiles] = useState<StreamProfile[]>([]);
   const [loadingState, setLoadingState] = useState<LoadingState>({
-    isLoading: false,
+    isLoading: true, // Start as loading
     error: null
-  })
+  });
 
-  const profileRepository = getProfileRepository()
+  const profileRepository = getProfileRepository();
 
   /**
    * Load all profiles from the repository
    */
   const loadProfiles = useCallback(async () => {
-    setLoadingState({ isLoading: true, error: null })
+    setLoadingState(prev => ({ ...prev, isLoading: true }));
     
     try {
-      const result = await profileRepository.getAll()
+      const result = await profileRepository.getAll();
       
       if (result.success && result.data) {
-        setProfiles(result.data)
-        setLoadingState({ isLoading: false, error: null })
+        setProfiles(result.data);
+        setLoadingState({ isLoading: false, error: null });
       } else {
         setLoadingState({
           isLoading: false,
           error: result.error?.message || 'Failed to load profiles'
-        })
+        });
       }
     } catch (error) {
       setLoadingState({
         isLoading: false,
         error: error instanceof Error ? error.message : 'An unexpected error occurred'
-      })
+      });
     }
-  }, [profileRepository])
+  }, [profileRepository]);
 
   /**
-   * Create a new profile
+   * Create a new profile with optimistic updates
    */
-  const createProfile = useCallback(async (profileData: CreateProfileDto): Promise<Profile | null> => {
-    setLoadingState({ isLoading: true, error: null })
+  const createProfile = useCallback(async (profileData: CreateProfileInput): Promise<StreamProfile | null> => {
+    setLoadingState(prev => ({ ...prev, isLoading: true }));
     
     try {
-      const result = await profileRepository.create(profileData)
+      const result = await profileRepository.create(profileData);
       
       if (result.success && result.data) {
-        // Add the new profile to the current list
-        setProfiles(prev => [result.data!, ...prev])
-        setLoadingState({ isLoading: false, error: null })
-        return result.data
+        // Optimistic update: add to beginning of list
+        setProfiles(prev => [result.data!, ...prev]);
+        setLoadingState({ isLoading: false, error: null });
+        return result.data;
       } else {
         setLoadingState({
           isLoading: false,
           error: result.error?.message || 'Failed to create profile'
-        })
-        return null
+        });
+        return null;
       }
     } catch (error) {
       setLoadingState({
         isLoading: false,
         error: error instanceof Error ? error.message : 'An unexpected error occurred'
-      })
-      return null
+      });
+      return null;
     }
-  }, [profileRepository])
+  }, [profileRepository]);
 
   /**
-   * Update an existing profile
+   * Update an existing profile with optimistic updates
    */
-  const updateProfile = useCallback(async (id: string, updates: UpdateProfileDto): Promise<Profile | null> => {
-    setLoadingState({ isLoading: true, error: null })
+  const updateProfile = useCallback(async (id: string, updates: UpdateProfileInput): Promise<StreamProfile | null> => {
+    setLoadingState(prev => ({ ...prev, isLoading: true }));
     
     try {
-      const result = await profileRepository.update(id, updates)
+      const result = await profileRepository.update(id, updates);
       
       if (result.success && result.data) {
-        // Update the profile in the current list
+        // Optimistic update: update profile in place
         setProfiles(prev => 
           prev.map(profile => 
             profile.id === id ? result.data! : profile
           )
-        )
-        setLoadingState({ isLoading: false, error: null })
-        return result.data
+        );
+        setLoadingState({ isLoading: false, error: null });
+        return result.data;
       } else {
         setLoadingState({
           isLoading: false,
           error: result.error?.message || 'Failed to update profile'
-        })
-        return null
+        });
+        return null;
       }
     } catch (error) {
       setLoadingState({
         isLoading: false,
         error: error instanceof Error ? error.message : 'An unexpected error occurred'
-      })
-      return null
+      });
+      return null;
     }
-  }, [profileRepository])
+  }, [profileRepository]);
 
   /**
-   * Delete a profile
+   * Delete a profile with optimistic updates
    */
   const deleteProfile = useCallback(async (id: string): Promise<boolean> => {
-    setLoadingState({ isLoading: true, error: null })
+    setLoadingState(prev => ({ ...prev, isLoading: true }));
+    
+    // Store the profile for potential rollback
+    const profileToDelete = profiles.find(p => p.id === id);
+    
+    // Optimistic update: remove immediately
+    setProfiles(prev => prev.filter(profile => profile.id !== id));
     
     try {
-      const result = await profileRepository.delete(id)
+      const result = await profileRepository.delete(id);
       
       if (result.success) {
-        // Remove the profile from the current list
-        setProfiles(prev => prev.filter(profile => profile.id !== id))
-        setLoadingState({ isLoading: false, error: null })
-        return true
+        setLoadingState({ isLoading: false, error: null });
+        return true;
       } else {
+        // Rollback on failure
+        if (profileToDelete) {
+          setProfiles(prev => [...prev, profileToDelete].sort((a, b) => 
+            b.updatedAt.getTime() - a.updatedAt.getTime()
+          ));
+        }
         setLoadingState({
           isLoading: false,
           error: result.error?.message || 'Failed to delete profile'
-        })
-        return false
+        });
+        return false;
       }
     } catch (error) {
+      // Rollback on error
+      if (profileToDelete) {
+        setProfiles(prev => [...prev, profileToDelete].sort((a, b) => 
+          b.updatedAt.getTime() - a.updatedAt.getTime()
+        ));
+      }
       setLoadingState({
         isLoading: false,
         error: error instanceof Error ? error.message : 'An unexpected error occurred'
-      })
-      return false
+      });
+      return false;
     }
-  }, [profileRepository])
+  }, [profiles, profileRepository]);
 
   /**
    * Get a specific profile by ID
    */
-  const getProfile = useCallback(async (id: string): Promise<Profile | null> => {
+  const getProfile = useCallback(async (id: string): Promise<StreamProfile | null> => {
     try {
-      const result = await profileRepository.getById(id)
-      return result.success && result.data ? result.data : null
+      const result = await profileRepository.getById(id);
+      return result.success && result.data ? result.data : null;
     } catch (error) {
-      console.error('Failed to get profile:', error)
-      return null
+      console.error('Failed to get profile:', error);
+      return null;
     }
-  }, [profileRepository])
+  }, [profileRepository]);
 
   /**
-   * Search profiles by name
+   * Search profiles by query
    */
-  const searchProfiles = useCallback(async (query: string): Promise<Profile[]> => {
+  const searchProfiles = useCallback(async (query: string): Promise<StreamProfile[]> => {
     try {
-      const result = await profileRepository.searchByName(query)
-      return result.success && result.data ? result.data : []
+      const result = await profileRepository.search(query);
+      return result.success && result.data ? result.data : [];
     } catch (error) {
-      console.error('Failed to search profiles:', error)
-      return []
+      console.error('Failed to search profiles:', error);
+      return [];
     }
-  }, [profileRepository])
+  }, [profileRepository]);
 
   /**
    * Clear any errors
    */
   const clearError = useCallback(() => {
-    setLoadingState(prev => ({ ...prev, error: null }))
-  }, [])
+    setLoadingState(prev => ({ ...prev, error: null }));
+  }, []);
 
   /**
    * Refresh profiles (reload from database)
    */
   const refreshProfiles = useCallback(() => {
-    loadProfiles()
-  }, [loadProfiles])
+    loadProfiles();
+  }, [loadProfiles]);
+
+  /**
+   * Apply a profile (for future Twitch API integration)
+   */
+  const applyProfile = useCallback(async (profile: StreamProfile): Promise<boolean> => {
+    // Process dynamic title templates
+    const processedTitle = processTitle(profile.title);
+    
+    // TODO: This will integrate with Twitch API in Phase 5
+    console.log('Applying profile:', {
+      ...profile,
+      title: processedTitle.processed
+    });
+    
+    // For now, just return success (local mode)
+    return true;
+  }, []);
+
+  // Computed values
+  const computedValues = useMemo(() => ({
+    profileCount: profiles.length,
+    hasProfiles: profiles.length > 0,
+    isEmpty: profiles.length === 0,
+    categories: [...new Set(profiles.map(p => p.category.name))],
+    mostRecentProfile: profiles[0] || null,
+    profilesWithTemplates: profiles.filter(p => 
+      p.title.includes('{YYYY-MM-DD}') || p.title.includes('{DAY}')
+    ).length
+  }), [profiles]);
 
   // Load profiles on hook initialization
   useEffect(() => {
-    loadProfiles()
-  }, [loadProfiles])
+    loadProfiles();
+  }, [loadProfiles]);
 
   return {
     // Data
@@ -196,67 +258,139 @@ export const useProfiles = () => {
     getProfile,
     searchProfiles,
     refreshProfiles,
+    applyProfile,
     
     // Utils
     clearError,
     
     // Computed values
-    profileCount: profiles.length,
-    hasProfiles: profiles.length > 0
-  }
-}
+    ...computedValues
+  };
+};
 
 /**
  * Hook for managing a single profile (useful for edit forms)
  */
 export const useProfile = (id: string | null) => {
-  const [profile, setProfile] = useState<Profile | null>(null)
+  const [profile, setProfile] = useState<StreamProfile | null>(null);
   const [loadingState, setLoadingState] = useState<LoadingState>({
     isLoading: false,
     error: null
-  })
+  });
 
-  const profileRepository = getProfileRepository()
+  const profileRepository = getProfileRepository();
 
   const loadProfile = useCallback(async () => {
     if (!id) {
-      setProfile(null)
-      setLoadingState({ isLoading: false, error: null })
-      return
+      setProfile(null);
+      setLoadingState({ isLoading: false, error: null });
+      return;
     }
 
-    setLoadingState({ isLoading: true, error: null })
+    setLoadingState({ isLoading: true, error: null });
     
     try {
-      const result = await profileRepository.getById(id)
+      const result = await profileRepository.getById(id);
       
       if (result.success && result.data) {
-        setProfile(result.data)
-        setLoadingState({ isLoading: false, error: null })
+        setProfile(result.data);
+        setLoadingState({ isLoading: false, error: null });
       } else {
-        setProfile(null)
+        setProfile(null);
         setLoadingState({
           isLoading: false,
           error: result.error?.message || 'Profile not found'
-        })
+        });
       }
     } catch (error) {
-      setProfile(null)
+      setProfile(null);
       setLoadingState({
         isLoading: false,
         error: error instanceof Error ? error.message : 'An unexpected error occurred'
-      })
+      });
     }
-  }, [id, profileRepository])
+  }, [id, profileRepository]);
 
   useEffect(() => {
-    loadProfile()
-  }, [loadProfile])
+    loadProfile();
+  }, [loadProfile]);
 
   return {
     profile,
     isLoading: loadingState.isLoading,
     error: loadingState.error,
-    reload: loadProfile
-  }
-}
+    reload: loadProfile,
+    exists: profile !== null
+  };
+};
+
+/**
+ * Hook for profile validation
+ */
+export const useProfileValidation = () => {
+  const { validateProfile } = require('@/types/ProfileUtils');
+  
+  const validateInput = useCallback((input: CreateProfileInput) => {
+    return validateProfile(input);
+  }, []);
+
+  return {
+    validateInput
+  };
+};
+
+/**
+ * Hook for profile statistics and analytics
+ */
+export const useProfileStats = () => {
+  const [stats, setStats] = useState({
+    total: 0,
+    byCategory: {} as Record<string, number>,
+    withTemplates: 0,
+    mostUsedTags: [] as Array<{ tag: string; count: number }>,
+    recentlyUpdated: [] as StreamProfile[]
+  });
+
+  const { profiles, isLoading } = useProfiles();
+
+  useEffect(() => {
+    if (!isLoading && profiles.length > 0) {
+      const { getProfileStats } = require('@/types/ProfileUtils');
+      setStats(getProfileStats(profiles));
+    }
+  }, [profiles, isLoading]);
+
+  return stats;
+};
+
+/**
+ * Hook for checking repository health
+ */
+export const useRepositoryHealth = () => {
+  const [isHealthy, setIsHealthy] = useState(false);
+  const [isChecking, setIsChecking] = useState(true);
+  
+  const profileRepository = getProfileRepository();
+
+  const checkHealth = useCallback(async () => {
+    setIsChecking(true);
+    try {
+      const healthy = await profileRepository.isReady();
+      setIsHealthy(healthy);
+    } catch {
+      setIsHealthy(false);
+    } finally {
+      setIsChecking(false);
+    }
+  }, [profileRepository]);
+
+  useEffect(() => {
+    checkHealth();
+  }, [checkHealth]);
+
+  return {
+    isHealthy,
+    isChecking,
+    checkHealth
+  };
+};
