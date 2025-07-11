@@ -21,6 +21,13 @@ export {
   useCategoryValidation 
 } from './useCategories';
 
+// Authentication Hooks
+export {
+  useAuth,
+  useAuthState,
+  withAuth
+} from './useAuth';
+
 // Convenience object for all hooks
 export const hooks = {
   // Profile hooks
@@ -33,7 +40,12 @@ export const hooks = {
   // Category hooks
   useCategories,
   useCategorySearch,
-  useCategoryValidation
+  useCategoryValidation,
+  
+  // Auth hooks
+  useAuth,
+  useAuthState,
+  withAuth
 } as const;
 
 /**
@@ -43,3 +55,5 @@ export type ProfilesHookResult = ReturnType<typeof useProfiles>;
 export type ProfileHookResult = ReturnType<typeof useProfile>;
 export type CategoriesHookResult = ReturnType<typeof useCategories>;
 export type CategorySearchHookResult = ReturnType<typeof useCategorySearch>;
+export type AuthHookResult = ReturnType<typeof useAuth>;
+export type AuthStateHookResult = ReturnType<typeof useAuthState>;
