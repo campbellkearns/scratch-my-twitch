@@ -28,8 +28,10 @@ export const TWITCH_CONFIG = {
   REQUIRED_SCOPES: ['channel:manage:broadcast'],
   /** OAuth response type */
   RESPONSE_TYPE: 'code',
-  /** OAuth redirect URI (will be set at runtime) */
-  REDIRECT_URI: `${window.location.origin}/auth/callback`,
+  /** OAuth redirect URI (dynamic based on environment) */
+  get REDIRECT_URI() {
+    return `${window.location.origin}/auth/callback`;
+  },
   /** Client ID (to be set from environment) */
   CLIENT_ID: import.meta.env.VITE_TWITCH_CLIENT_ID || ''
 } as const;

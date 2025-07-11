@@ -5,12 +5,15 @@ import Dashboard from './pages/Dashboard';
 import CreateProfile from './pages/CreateProfile';
 import EditProfile from './pages/EditProfile';
 import AuthPage from './pages/AuthPage';
+import AuthCallback from './pages/AuthCallback';
+import DiagnosticPage from './pages/DiagnosticPage';
 import { initializeRepositories } from './repositories';
 import './App.css';
 
 // Import test functions in development
 if (import.meta.env.DEV) {
   import('./lib/test/repositoryTests');
+  import('./lib/test/authTests');
 }
 
 function App(): JSX.Element {
@@ -33,7 +36,10 @@ function App(): JSX.Element {
         <Route path="profile/new" element={<CreateProfile />} />
         <Route path="profile/:id/edit" element={<EditProfile />} />
         <Route path="auth" element={<AuthPage />} />
+        <Route path="diagnostic" element={<DiagnosticPage />} />
       </Route>
+      {/* OAuth callback route outside of Layout */}
+      <Route path="/auth/callback" element={<AuthCallback />} />
     </Routes>
   );
 }
