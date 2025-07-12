@@ -12,31 +12,44 @@ export default defineConfig({
         VitePWA({
             registerType: "autoUpdate",
             includeAssets: [
-                "favicon.ico",
-                "apple-touch-icon.png",
-                "masked-icon.svg",
+                "favicon.svg",
+                "favicon-16x16.png",
+                "favicon-32x32.png",
+                "apple-touch-icon.svg",
+                "pwa-192x192.svg",
+                "pwa-512x512.svg",
+                "pwa-512x512-maskable.svg",
             ],
             manifest: {
-                name: "Scratch My Twitch",
-                short_name: "ScratchMyTwitch",
-                description:
-                    "Manage your Twitch stream info with one-click updates",
+                name: "Scratch My Twitch - Stream Profile Manager",
+                short_name: "Scratch My Twitch",
+                description: "One-click Twitch stream setup with custom profiles. Manage your streaming categories, titles, and tags instantly.",
                 theme_color: "#86EFAC",
                 background_color: "#FAFAF9",
                 display: "standalone",
+                orientation: "portrait-primary",
                 scope: "/",
                 start_url: "/",
+                categories: ["productivity", "entertainment", "utilities"],
                 icons: [
                     {
-                        src: "pwa-192x192.png",
+                        src: "pwa-192x192.svg",
                         sizes: "192x192",
-                        type: "image/png",
+                        type: "image/svg+xml",
+                        purpose: "any"
                     },
                     {
-                        src: "pwa-512x512.png",
+                        src: "pwa-512x512.svg",
                         sizes: "512x512",
-                        type: "image/png",
+                        type: "image/svg+xml",
+                        purpose: "any"
                     },
+                    {
+                        src: "pwa-512x512-maskable.svg",
+                        sizes: "512x512",
+                        type: "image/svg+xml",
+                        purpose: "maskable"
+                    }
                 ],
             },
             workbox: {
