@@ -37,6 +37,26 @@ export const TWITCH_CONFIG = {
 } as const;
 
 /**
+ * Twitch API endpoints
+ */
+export const TWITCH_ENDPOINTS = {
+  /** OAuth token endpoint */
+  TOKEN: 'https://id.twitch.tv/oauth2/token',
+  /** Token validation endpoint */
+  VALIDATE: 'https://id.twitch.tv/oauth2/validate',
+  /** Revoke token endpoint */
+  REVOKE: 'https://id.twitch.tv/oauth2/revoke',
+  /** API base URL */
+  API_BASE: 'https://api.twitch.tv/helix',
+  /** Channel information */
+  CHANNELS: '/channels',
+  /** Games/categories */
+  GAMES: '/games',
+  /** User information */
+  USERS: '/users'
+} as const;
+
+/**
  * API request configuration
  */
 export const API_CONFIG = {
