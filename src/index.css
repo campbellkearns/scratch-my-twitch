@@ -96,6 +96,19 @@
     box-shadow: var(--shadow-sm);
   }
   
+  .scandi-btn-disabled {
+    @apply px-5 py-3 bg-neutral-200 border-none rounded font-normal text-neutral-500 cursor-not-allowed;
+    box-shadow: none;
+  }
+  
+  .scandi-btn-secondary {
+    @apply px-4 py-2 bg-neutral-100 border border-neutral-200 rounded font-normal text-neutral-700 transition-all duration-200 cursor-pointer;
+  }
+  
+  .scandi-btn-secondary:hover {
+    @apply bg-neutral-200 border-neutral-300;
+  }
+  
   /* Scandinavian Card Component */
   .scandi-card {
     @apply p-5 bg-white border border-neutral-200 rounded-lg transition-all duration-200;

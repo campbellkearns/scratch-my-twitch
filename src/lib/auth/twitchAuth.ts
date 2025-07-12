@@ -6,14 +6,13 @@
  */
 
 import { getDB } from '@/lib/db/indexedDB';
-import { TWITCH_CONFIG, STORAGE_KEYS, API_CONFIG, ERROR_CODES, FEATURE_FLAGS } from '@/types/constants';
+import { TWITCH_ENDPOINTS, TWITCH_CONFIG, STORAGE_KEYS, API_CONFIG, ERROR_CODES, FEATURE_FLAGS } from '@/types/constants';
 import { 
   TwitchAuthToken, 
   StoredAuthToken, 
   OAuthState, 
   TwitchUserResponse,
-  TwitchUserInfoResponse,
-  TWITCH_ENDPOINTS 
+  TwitchUserInfoResponse
 } from '@/types/TwitchAPI';
 
 /**
