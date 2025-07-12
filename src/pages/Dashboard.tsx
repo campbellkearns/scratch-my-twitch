@@ -1,6 +1,8 @@
 import { Link } from 'react-router-dom'
 import { useProfiles } from '@/hooks/useProfiles'
+import { useAPIHealth } from '@/hooks/useAPIHealth'
 import { processTitle } from '@/types/ProfileUtils'
+import { APIStatusIndicator } from '@/components/APIStatus'
 
 export default function Dashboard(): JSX.Element {
   const { 
@@ -13,6 +15,12 @@ export default function Dashboard(): JSX.Element {
     isEmpty,
     profileCount 
   } = useProfiles()
+  
+  const {
+    shouldDisableActions,
+    isAvailable: apiAvailable,
+    getStatusMessage
+  } = useAPIHealth()
 
   const handleDeleteProfile = async (id: string, name: string) => {
     if (window.confirm(`Are you sure you want to delete "${name}"?`)) {
@@ -25,12 +33,16 @@ export default function Dashboard(): JSX.Element {
   }
 
   const handleApplyProfile = async (profile: any) => {
+    // Clear any previous errors before applying
+    clearError()
+    
     const success = await applyProfile(profile)
     if (success) {
-      // For now, just show a success message
       const processedTitle = processTitle(profile.title)
-      alert(`Applied profile "${profile.name}"!\nTitle: ${processedTitle.processed}`)
+      // Show success notification
+      alert(`✅ Successfully applied profile "${profile.name}" to your Twitch stream!\n\nTitle: ${processedTitle.processed}\nCategory: ${profile.category.name}\nTags: ${profile.tags.join(', ')}`)
     }
+    // Error handling is now managed by the useProfiles hook
   }
 
   // Loading state
@@ -68,11 +80,40 @@ export default function Dashboard(): JSX.Element {
 
   return (
     <div>
+      {/* API Status Banner */}
+      {!apiAvailable && (
+        <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg">
+          <div className="flex items-center space-x-3">
+            <span className="text-red-600">🔴</span>
+            <div className="flex-1">
+              <p className="text-red-800 font-medium mb-1">
+                Unable to connect to Twitch services
+              </p>
+              <p className="text-red-700 text-sm">
+                Profile actions are temporarily disabled. Check your connection or visit{' '}
+                <a 
+                  href="https://status.twitch.tv/" 
+                  target="_blank" 
+                  rel="noopener noreferrer"
+                  className="underline hover:text-red-900"
+                >
+                  Twitch Status
+                </a>
+                {' '}for service updates.
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
+      
       <div className="flex items-center justify-between mb-8">
         <div>
-          <h1 className="text-4xl font-medium text-neutral-900 mb-3">
-            Stream Profiles
-          </h1>
+          <div className="flex items-center space-x-3 mb-3">
+          <h1 className="text-4xl font-medium text-neutral-900">
+              Stream Profiles
+              </h1>
+              <APIStatusIndicator />
+            </div>
           <p className="text-lg text-neutral-600">
             {profileCount === 0 
               ? 'No profiles yet - create your first one to get started'
@@ -160,9 +201,18 @@ export default function Dashboard(): JSX.Element {
                 <div className="space-y-2">
                   <button 
                     onClick={() => handleApplyProfile(profile)}
-                    className="scandi-btn w-full"
+                    disabled={shouldDisableActions()}
+                    className={`w-full transition-all ${
+                      shouldDisableActions() 
+                        ? 'scandi-btn-disabled cursor-not-allowed opacity-50' 
+                        : 'scandi-btn'
+                    }`}
+                    title={shouldDisableActions() ? getStatusMessage() : 'Apply this profile to your Twitch stream'}
                   >
-                    Apply Profile
+                    <div className="flex items-center justify-center space-x-2">
+                      <span>Apply Profile</span>
+                      <APIStatusIndicator className="text-xs" />
+                    </div>
                   </button>
                   
                   <div className="text-xs text-neutral-400 text-center">
