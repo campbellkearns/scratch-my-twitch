@@ -11,6 +11,42 @@ export default defineConfig({
         tailwindcss(),
         VitePWA({
             registerType: "autoUpdate",
+            devOptions: {
+                enabled: true
+            },
+            workbox: {
+                globPatterns: ["**/*.{js,css,html,ico,png,svg}"],
+                cleanupOutdatedCaches: true,
+                skipWaiting: true,
+                clientsClaim: true,
+                runtimeCaching: [
+                    {
+                        urlPattern: /^https:\/\/api\.twitch\.tv\/.*/i,
+                        handler: "NetworkFirst",
+                        options: {
+                            cacheName: "twitch-api-cache",
+                            expiration: {
+                                maxEntries: 10,
+                                maxAgeSeconds: 60 * 5, // 5 minutes
+                            },
+                            cacheKeyWillBeUsed: async ({ request }) => {
+                                return `${request.url}?timestamp=${Date.now()}`;
+                            },
+                        },
+                    },
+                    {
+                        urlPattern: /^https:\/\/static-cdn\.jtvnw\.net\/.*/i,
+                        handler: "CacheFirst",
+                        options: {
+                            cacheName: "twitch-assets-cache",
+                            expiration: {
+                                maxEntries: 50,
+                                maxAgeSeconds: 60 * 60 * 24, // 24 hours
+                            },
+                        },
+                    },
+                ],
+            },
             includeAssets: [
                 "favicon.svg",
                 "favicon-16x16.png",
@@ -21,16 +57,25 @@ export default defineConfig({
                 "pwa-512x512-maskable.svg",
             ],
             manifest: {
+                id: "scratch-my-twitch-pwa",
                 name: "Scratch My Twitch - Stream Profile Manager",
                 short_name: "Scratch My Twitch",
-                description: "One-click Twitch stream setup with custom profiles. Manage your streaming categories, titles, and tags instantly.",
+                description: "One-click Twitch stream setup with custom profiles. Manage your streaming categories, titles, and tags instantly. Perfect for content creators who stream varied content.",
                 theme_color: "#86EFAC",
                 background_color: "#FAFAF9",
                 display: "standalone",
+                display_override: ["window-controls-overlay", "standalone"],
                 orientation: "portrait-primary",
                 scope: "/",
-                start_url: "/",
-                categories: ["productivity", "entertainment", "utilities"],
+                start_url: "/?utm_source=pwa",
+                launch_handler: {
+                    client_mode: "navigate-existing"
+                },
+                categories: ["productivity", "entertainment", "utilities", "lifestyle"],
+                keywords: ["twitch", "streaming", "broadcast", "profile", "manager", "content creator"],
+                lang: "en-US",
+                dir: "ltr",
+                prefer_related_applications: false,
                 icons: [
                     {
                         src: "pwa-192x192.svg",
@@ -50,22 +95,6 @@ export default defineConfig({
                         type: "image/svg+xml",
                         purpose: "maskable"
                     }
-                ],
-            },
-            workbox: {
-                globPatterns: ["**/*.{js,css,html,ico,png,svg}"],
-                runtimeCaching: [
-                    {
-                        urlPattern: /^https:\/\/api\.twitch\.tv\/.*/i,
-                        handler: "NetworkFirst",
-                        options: {
-                            cacheName: "twitch-api-cache",
-                            expiration: {
-                                maxEntries: 10,
-                                maxAgeSeconds: 60 * 5, // 5 minutes
-                            },
-                        },
-                    },
                 ],
             },
         }),
