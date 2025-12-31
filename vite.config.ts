@@ -29,9 +29,6 @@ export default defineConfig({
                                 maxEntries: 10,
                                 maxAgeSeconds: 60 * 5, // 5 minutes
                             },
-                            cacheKeyWillBeUsed: async ({ request }) => {
-                                return `${request.url}?timestamp=${Date.now()}`;
-                            },
                         },
                     },
                     {
