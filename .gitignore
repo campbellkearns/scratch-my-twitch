@@ -17,8 +17,11 @@ dev-dist
 # Environment variables
 .env
 
-# development docs
-*.md
+# Playwright test results
+test-results/
+playwright-report/
+playwright/.cache/
+.playwright/
 
 # Editor directories and files
 .vscode/*
