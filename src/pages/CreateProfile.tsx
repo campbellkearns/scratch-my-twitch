@@ -1,7 +1,8 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useProfiles } from '@/hooks/useProfiles'
-import type { CreateProfileInput } from '@/types/Profile'
+import { CategorySearchDropdown } from '@/components/CategorySearchDropdown'
+import type { CreateProfileInput, StreamCategory } from '@/types/Profile'
 
 export default function CreateProfile(): JSX.Element {
   const navigate = useNavigate()
@@ -10,10 +11,11 @@ export default function CreateProfile(): JSX.Element {
   const [formData, setFormData] = useState({
     name: '',
     description: '',
-    categoryName: '',
     title: '',
     tags: ''
   })
+
+  const [selectedCategory, setSelectedCategory] = useState<StreamCategory | null>(null)
   
   const [formErrors, setFormErrors] = useState<Record<string, string>>({})
   const [isSubmitting, setIsSubmitting] = useState(false)
@@ -29,8 +31,8 @@ export default function CreateProfile(): JSX.Element {
     }
     
     // Category validation
-    if (!formData.categoryName.trim()) {
-      errors.categoryName = 'Category is required'
+    if (!selectedCategory || !selectedCategory.name.trim()) {
+      errors.category = 'Category is required'
     }
     
     // Title validation
@@ -71,12 +73,9 @@ export default function CreateProfile(): JSX.Element {
       const profileInput: CreateProfileInput = {
         name: formData.name.trim(),
         description: formData.description.trim() || undefined,
-        category: {
-          id: formData.categoryName.toLowerCase().replace(/[^a-z0-9]/g, ''), // Simple ID generation
-          name: formData.categoryName.trim()
-        },
+        category: selectedCategory!,
         title: formData.title.trim(),
-        tags: formData.tags 
+        tags: formData.tags
           ? formData.tags.split(',').map(tag => tag.trim()).filter(Boolean)
           : []
       }
@@ -186,26 +185,25 @@ export default function CreateProfile(): JSX.Element {
               </div>
 
               <div>
-                <label htmlFor="categoryName" className="block text-sm font-medium text-neutral-700 mb-2">
+                <label htmlFor="category" className="block text-sm font-medium text-neutral-700 mb-2">
                   Twitch Category *
                 </label>
-                <input
-                  type="text"
-                  id="categoryName"
-                  name="categoryName"
-                  value={formData.categoryName}
-                  onChange={handleChange}
-                  className={`scandi-input w-full ${formErrors.categoryName ? 'border-red-300 bg-red-50' : ''}`}
-                  placeholder="e.g., Just Chatting"
+                <CategorySearchDropdown
+                  value={selectedCategory}
+                  onChange={(category) => {
+                    setSelectedCategory(category);
+                    // Clear error when category is selected
+                    if (category && formErrors.category) {
+                      setFormErrors(prev => ({
+                        ...prev,
+                        category: ''
+                      }));
+                    }
+                  }}
+                  error={formErrors.category}
                   disabled={isFormDisabled}
                   required
                 />
-                {formErrors.categoryName && (
-                  <p className="text-red-600 text-xs mt-1">{formErrors.categoryName}</p>
-                )}
-                <p className="text-xs text-neutral-500 mt-1">
-                  The exact category name from Twitch
-                </p>
               </div>
 
               <div>
