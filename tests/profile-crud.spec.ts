@@ -26,24 +26,19 @@ test.describe('Profile Management', () => {
     await page.fill('textarea[name="description"]', 'A test profile for automated testing');
     await page.fill('input[name="title"]', 'Test Stream - {DAY}');
 
-    // Select a category (this might need adjustment based on actual implementation)
-    // For now, we'll check if category search is available
-    const categoryInput = page.locator('input[placeholder*="category" i], input[placeholder*="search" i]').first();
-    if (await categoryInput.isVisible()) {
-      await categoryInput.fill('Just Chatting');
-      await page.waitForTimeout(500); // Wait for search results
-      await page.click('text=Just Chatting').first();
-    }
+    // Select a category using the dropdown
+    const categoryInput = page.locator('input[placeholder*="Search for a category" i]');
+    await categoryInput.fill('Just Chatting');
+    await page.waitForTimeout(500); // Wait for search results
 
-    // Add tags
-    const tagInput = page.locator('input[placeholder*="tag" i]').first();
-    if (await tagInput.isVisible()) {
-      await tagInput.fill('test');
-      await page.keyboard.press('Enter');
-    }
+    const justChattingOption = page.locator('button[role="option"]:has-text("Just Chatting")').first();
+    await justChattingOption.click();
+
+    // Add tags (comma-separated in the tags input)
+    await page.fill('input[name="tags"]', 'test, automated');
 
     // Submit the form
-    await page.click('button:has-text("Create Profile"), button[type="submit"]');
+    await page.click('button:has-text("Create Profile")');
 
     // Should redirect to dashboard
     await expect(page).toHaveURL('/', { timeout: 5000 });
@@ -70,7 +65,15 @@ test.describe('Profile Management', () => {
       await page.click('a:has-text("New Profile"), a:has-text("Create Profile")');
       await page.fill('input[name="name"]', 'Profile to Edit');
       await page.fill('input[name="title"]', 'Original Title');
-      await page.click('button[type="submit"]');
+
+      // Select a category
+      const categoryInput = page.locator('input[placeholder*="Search for a category" i]');
+      await categoryInput.fill('Music');
+      await page.waitForTimeout(500);
+      const musicOption = page.locator('button[role="option"]:has-text("Music")').first();
+      await musicOption.click();
+
+      await page.click('button:has-text("Create Profile")');
       await page.waitForURL('/');
     }
 
@@ -89,7 +92,7 @@ test.describe('Profile Management', () => {
     await titleInput.fill('Updated Title - {DAY}');
 
     // Save changes
-    await page.click('button:has-text("Save"), button[type="submit"]');
+    await page.click('button:has-text("Save Changes")');
 
     // Should redirect back to dashboard
     await expect(page).toHaveURL('/');
@@ -107,7 +110,15 @@ test.describe('Profile Management', () => {
       await page.click('a:has-text("New Profile"), a:has-text("Create Profile")');
       await page.fill('input[name="name"]', 'Profile to Delete');
       await page.fill('input[name="title"]', 'Will be deleted');
-      await page.click('button[type="submit"]');
+
+      // Select a category
+      const categoryInput = page.locator('input[placeholder*="Search for a category" i]');
+      await categoryInput.fill('Art');
+      await page.waitForTimeout(500);
+      const artOption = page.locator('button[role="option"]:has-text("Art")').first();
+      await artOption.click();
+
+      await page.click('button:has-text("Create Profile")');
       await page.waitForURL('/');
     }
 

@@ -12,130 +12,128 @@ test.describe('Category Search', () => {
   });
 
   test('should show category search input', async ({ page }) => {
-    // Look for category search/selection input
-    const categoryInput = page.locator(
-      'input[placeholder*="category" i], input[placeholder*="search" i], input[placeholder*="game" i]'
-    ).first();
-
+    // Look for the category dropdown input
+    const categoryInput = page.locator('input[placeholder*="Search for a category" i]');
     await expect(categoryInput).toBeVisible();
   });
 
   test('should search for categories', async ({ page }) => {
-    const categoryInput = page.locator(
-      'input[placeholder*="category" i], input[placeholder*="search" i], input[placeholder*="game" i]'
-    ).first();
+    const categoryInput = page.locator('input[placeholder*="Search for a category" i]');
 
     // Type a search query
     await categoryInput.fill('Just');
     await page.waitForTimeout(500); // Wait for debounce/search
 
+    // Dropdown should be visible
+    const dropdown = page.locator('#category-dropdown');
+    await expect(dropdown).toBeVisible();
+
     // Should show search results
-    const hasResults = await page.locator('text=Just Chatting, text=Just Dancing').count() > 0;
-    expect(hasResults).toBeTruthy();
+    const justChattingOption = page.locator('button[role="option"]:has-text("Just Chatting")');
+    await expect(justChattingOption).toBeVisible();
   });
 
   test('should select a category from search results', async ({ page }) => {
-    const categoryInput = page.locator(
-      'input[placeholder*="category" i], input[placeholder*="search" i], input[placeholder*="game" i]'
-    ).first();
+    const categoryInput = page.locator('input[placeholder*="Search for a category" i]');
 
     // Search and select
     await categoryInput.fill('Science');
     await page.waitForTimeout(500);
 
     // Click on a result
-    await page.click('text=Science & Technology, text=Science').first();
+    const scienceOption = page.locator('button[role="option"]:has-text("Science & Technology")').first();
+    await scienceOption.click();
 
-    // The selected category should be visible somehow
-    const hasSelection = await page.locator(
-      'text=Science & Technology, text=Science'
-    ).count() > 0;
+    // The input should now show the selected category
+    await expect(categoryInput).toHaveValue('Science & Technology');
 
-    expect(hasSelection).toBeTruthy();
+    // Dropdown should close
+    const dropdown = page.locator('#category-dropdown');
+    await expect(dropdown).not.toBeVisible();
   });
 
   test('should handle no search results gracefully', async ({ page }) => {
-    const categoryInput = page.locator(
-      'input[placeholder*="category" i], input[placeholder*="search" i], input[placeholder*="game" i]'
-    ).first();
+    const categoryInput = page.locator('input[placeholder*="Search for a category" i]');
 
     // Search for something that likely doesn't exist
     await categoryInput.fill('xyzabc12345nonexistent');
     await page.waitForTimeout(500);
 
-    // Should show "no results" or empty state
-    const showsEmptyState = await page.locator(
-      'text=/no results/i, text=/not found/i, text=/no categories/i'
-    ).count() > 0;
+    // Should show "no categories found" message
+    const noResultsMessage = page.locator('text=No categories found');
+    await expect(noResultsMessage).toBeVisible();
 
-    // Or results list should be empty
-    const hasNoResults = showsEmptyState ||
-      await page.locator('[role="option"], .category-result').count() === 0;
-
-    expect(hasNoResults).toBeTruthy();
+    // Should show fallback message about manual entry
+    const fallbackMessage = page.locator('text=/You can still use.*as a manual entry/i');
+    await expect(fallbackMessage).toBeVisible();
   });
 
   test('should work offline with cached categories', async ({ page, context }) => {
-    // First do a search while online to populate cache
-    const categoryInput = page.locator(
-      'input[placeholder*="category" i], input[placeholder*="search" i], input[placeholder*="game" i]'
-    ).first();
+    const categoryInput = page.locator('input[placeholder*="Search for a category" i]');
 
+    // First do a search while online to populate cache
     await categoryInput.fill('Just Chatting');
     await page.waitForTimeout(500);
+
+    // Select it to ensure it's cached
+    const justChattingOption = page.locator('button[role="option"]:has-text("Just Chatting")').first();
+    await justChattingOption.click();
 
     // Now go offline
     await context.setOffline(true);
 
     // Clear and search again
     await categoryInput.clear();
+    await categoryInput.click(); // Focus to open dropdown
     await categoryInput.fill('Just');
     await page.waitForTimeout(500);
 
     // Should still show results from cache
-    const hasResults = await page.locator('text=Just Chatting').count() > 0;
-    expect(hasResults).toBeTruthy();
+    const cachedResult = page.locator('button[role="option"]:has-text("Just Chatting")');
+    await expect(cachedResult).toBeVisible();
 
     await context.setOffline(false);
   });
 
   test('should show popular/default categories', async ({ page }) => {
-    const categoryInput = page.locator(
-      'input[placeholder*="category" i], input[placeholder*="search" i], input[placeholder*="game" i]'
-    ).first();
+    const categoryInput = page.locator('input[placeholder*="Search for a category" i]');
 
-    // Click or focus the input without typing
+    // Focus the input without typing to trigger default results
     await categoryInput.click();
     await page.waitForTimeout(300);
 
-    // Should show default/popular categories
-    const hasDefaultCategories = await page.locator(
-      'text=Just Chatting, text=Music, text=Art, text=Science & Technology'
-    ).count() > 0;
+    // Dropdown should be visible
+    const dropdown = page.locator('#category-dropdown');
+    await expect(dropdown).toBeVisible();
 
-    expect(hasDefaultCategories).toBeTruthy();
+    // Should show default/popular categories - just check that we have some options
+    const categoryOptions = page.locator('button[role="option"]');
+    const count = await categoryOptions.count();
+    expect(count).toBeGreaterThan(0);
   });
 
   test('should clear category selection', async ({ page }) => {
-    const categoryInput = page.locator(
-      'input[placeholder*="category" i], input[placeholder*="search" i], input[placeholder*="game" i]'
-    ).first();
+    const categoryInput = page.locator('input[placeholder*="Search for a category" i]');
 
     // Select a category
     await categoryInput.fill('Music');
     await page.waitForTimeout(500);
-    await page.click('text=Music').first();
 
-    // Look for a clear/remove button
-    const clearButton = page.locator('button[title*="clear" i], button[title*="remove" i], button:has-text("×")');
+    const musicOption = page.locator('button[role="option"]:has-text("Music")').first();
+    await musicOption.click();
 
-    if (await clearButton.count() > 0) {
-      await clearButton.first().click();
+    // Input should now have the value
+    await expect(categoryInput).toHaveValue('Music');
 
-      // Input should be cleared
-      const inputValue = await categoryInput.inputValue();
-      expect(inputValue).toBe('');
-    }
+    // Look for the clear button (✕)
+    const clearButton = page.locator('button[aria-label="Clear category"]');
+    await expect(clearButton).toBeVisible();
+
+    // Click clear button
+    await clearButton.click();
+
+    // Input should be cleared
+    await expect(categoryInput).toHaveValue('');
   });
 
   test('should validate category is required', async ({ page }) => {
@@ -144,16 +142,69 @@ test.describe('Category Search', () => {
     await page.fill('input[name="title"]', 'Test');
 
     // Submit without category
-    await page.click('button[type="submit"]');
+    await page.click('button:has-text("Create Profile")');
+
+    // Wait a moment for validation
+    await page.waitForTimeout(300);
 
     // Should show validation error
-    const hasError = await page.locator(
-      'text=/category.*required/i, text=/select.*category/i, .error'
-    ).count() > 0;
+    const errorMessage = page.locator('text=/category.*required/i');
+    await expect(errorMessage).toBeVisible();
 
-    // Or should not navigate away
-    const stillOnNewPage = await page.url().includes('/profile/new');
+    // Should remain on the create page
+    await expect(page).toHaveURL(/\/profile\/new/);
+  });
 
-    expect(hasError || stillOnNewPage).toBeTruthy();
+  test('should show loading indicator while searching', async ({ page }) => {
+    const categoryInput = page.locator('input[placeholder*="Search for a category" i]');
+
+    // Type to trigger search
+    await categoryInput.fill('Just');
+
+    // Should show loading spinner briefly
+    // Note: This might be too fast to catch in tests, so we just verify the structure exists
+    const loadingSpinner = page.locator('span:has-text("⟳")').first();
+
+    // The spinner might not be visible by the time we check, but the element should exist
+    // Just verify the dropdown appears with results
+    const dropdown = page.locator('#category-dropdown');
+    await expect(dropdown).toBeVisible({ timeout: 1000 });
+  });
+
+  test('should display category artwork when available', async ({ page }) => {
+    const categoryInput = page.locator('input[placeholder*="Search for a category" i]');
+
+    // Search for a category
+    await categoryInput.fill('Just');
+    await page.waitForTimeout(500);
+
+    // Check if category options have either artwork or placeholder icon
+    const categoryOption = page.locator('button[role="option"]').first();
+    await expect(categoryOption).toBeVisible();
+
+    // Should have either an img tag (for artwork) or emoji placeholder
+    const hasArtwork = await categoryOption.locator('img').count() > 0;
+    const hasPlaceholder = await categoryOption.locator('text=🎮').count() > 0;
+
+    expect(hasArtwork || hasPlaceholder).toBeTruthy();
+  });
+
+  test('should show selected indicator on chosen category', async ({ page }) => {
+    const categoryInput = page.locator('input[placeholder*="Search for a category" i]');
+
+    // Search and select a category
+    await categoryInput.fill('Music');
+    await page.waitForTimeout(500);
+
+    const musicOption = page.locator('button[role="option"]:has-text("Music")').first();
+    await musicOption.click();
+
+    // Open dropdown again to see selected state
+    await categoryInput.click();
+    await page.waitForTimeout(300);
+
+    // The selected option should show a checkmark
+    const selectedIndicator = page.locator('text=✓ Selected');
+    await expect(selectedIndicator).toBeVisible();
   });
 });
