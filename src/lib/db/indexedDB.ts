@@ -179,18 +179,35 @@ export class IndexedDBWrapper {
   }
 }
 
-// Singleton instance
+// Singleton instance and initialization promise
 let dbInstance: IndexedDBWrapper | null = null;
+let initPromise: Promise<IndexedDBWrapper> | null = null;
 
 /**
  * Get the database instance
  */
 export const getDB = async (): Promise<IndexedDBWrapper> => {
-  if (!dbInstance) {
-    dbInstance = new IndexedDBWrapper();
-    await dbInstance.init();
+  // Return existing instance if already initialized
+  if (dbInstance) {
+    return dbInstance;
   }
-  return dbInstance;
+
+  // If initialization is in progress, wait for it
+  if (initPromise) {
+    return initPromise;
+  }
+
+  // Start new initialization
+  initPromise = (async () => {
+    const instance = new IndexedDBWrapper();
+    await instance.init();
+    dbInstance = instance;
+    return instance;
+  })();
+
+  const instance = await initPromise;
+  initPromise = null;
+  return instance;
 };
 
 /**
@@ -201,4 +218,5 @@ export const resetDB = (): void => {
     dbInstance.close();
     dbInstance = null;
   }
+  initPromise = null;
 };
