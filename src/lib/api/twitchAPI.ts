@@ -345,16 +345,31 @@ export class TwitchAPIClient {
 
   /**
    * Check Twitch API health and availability
+   * Note: Requires user authentication with implicit flow
    */
   async checkAPIHealth(): Promise<TwitchAPIHealthCheck> {
     const startTime = Date.now();
-    
+
     try {
-      // Simple health check - get games endpoint without auth (public)
+      // Get authenticated token for health check
+      const token = await this.auth.getValidToken();
+
+      if (!token) {
+        // No authentication available - skip health check
+        this.log('Health check skipped - no authentication');
+        return {
+          isAvailable: true, // Assume API is available, just not authenticated
+          responseTime: 0,
+          checkedAt: new Date()
+        };
+      }
+
+      // Perform authenticated health check using games endpoint
       const response = await fetch(
         `${TWITCH_ENDPOINTS.API_BASE}${TWITCH_ENDPOINTS.GAMES}?name=Just%20Chatting`,
         {
           headers: {
+            'Authorization': `Bearer ${token.access_token}`,
             'Client-Id': TWITCH_CONFIG.CLIENT_ID
           },
           signal: AbortSignal.timeout(5000) // 5 second timeout for health check
@@ -384,9 +399,9 @@ export class TwitchAPIClient {
     } catch (error) {
       const responseTime = Date.now() - startTime;
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-      
+
       this.logError('API health check error', error);
-      
+
       return {
         isAvailable: false,
         responseTime,
