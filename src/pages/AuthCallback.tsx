@@ -1,7 +1,7 @@
 /**
  * Auth Callback Component
- * 
- * Handles the OAuth callback from Twitch and processes the authorization code
+ *
+ * Handles the OAuth callback from Twitch using implicit grant flow (access token in URL hash)
  */
 
 import { useEffect, useState } from 'react';
@@ -17,31 +17,32 @@ export default function AuthCallback(): JSX.Element {
   useEffect(() => {
     const processCallback = async () => {
       try {
-        const currentUrl = window.location.href;
-        const urlParams = new URLSearchParams(window.location.search);
-        
+        // In implicit flow, tokens are in the URL hash, not query params
+        const hashParams = new URLSearchParams(window.location.hash.substring(1));
+
         // Check for error parameter
-        const errorParam = urlParams.get('error');
+        const errorParam = hashParams.get('error');
         if (errorParam) {
-          setCallbackError(`Authentication failed: ${errorParam}`);
+          const errorDescription = hashParams.get('error_description');
+          setCallbackError(`Authentication failed: ${errorParam}${errorDescription ? ' - ' + errorDescription : ''}`);
           setIsProcessing(false);
           return;
         }
 
-        // Check for authorization code
-        const code = urlParams.get('code');
-        if (!code) {
-          setCallbackError('No authorization code received');
+        // Check for access token (implicit flow)
+        const accessToken = hashParams.get('access_token');
+        if (!accessToken) {
+          setCallbackError('No access token received from Twitch');
           setIsProcessing(false);
           return;
         }
 
         // The useAuth hook will automatically process the callback
         // Just wait for the authentication state to update
-        
+
         // Wait a moment for auth processing
         await new Promise(resolve => setTimeout(resolve, 1000));
-        
+
         setIsProcessing(false);
       } catch (err) {
         console.error('Error processing callback:', err);

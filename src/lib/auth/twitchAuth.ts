@@ -1,8 +1,9 @@
 /**
  * Twitch OAuth 2.0 Authentication
- * 
- * Implements secure OAuth 2.0 flow with PKCE for Twitch API access.
- * Handles token storage, validation, and refresh according to PRD requirements.
+ *
+ * Implements secure OAuth 2.0 implicit grant flow for Twitch API access.
+ * Handles token storage, validation, and user authentication for browser-based apps.
+ * Note: Implicit flow does not support token refresh - users must re-authenticate when tokens expire.
  */
 
 import { getDB } from '@/lib/db/indexedDB';
@@ -377,7 +378,7 @@ export class TwitchAuth {
   }
 
   /**
-   * Store OAuth state for PKCE flow
+   * Store OAuth state for CSRF protection
    */
   private async storeOAuthState(state: OAuthState): Promise<void> {
     const db = await getDB();

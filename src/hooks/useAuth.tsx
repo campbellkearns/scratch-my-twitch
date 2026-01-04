@@ -187,11 +187,12 @@ export function useAuth(): AuthState & AuthActions {
 
   /**
    * Handle auth callback if we're on the callback route
+   * Note: Implicit flow returns tokens in URL hash (access_token=), not query params (code=)
    */
   useEffect(() => {
     const currentUrl = window.location.href;
-    const isCallbackUrl = currentUrl.includes('/auth/callback') || currentUrl.includes('code=');
-    
+    const isCallbackUrl = currentUrl.includes('/auth/callback') || currentUrl.includes('access_token=');
+
     if (isCallbackUrl && !state.isInitialized) {
       handleCallback(currentUrl);
     }
