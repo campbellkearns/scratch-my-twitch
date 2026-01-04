@@ -26,8 +26,8 @@ export const TWITCH_CONFIG = {
   AUTH_URL: 'https://id.twitch.tv/oauth2/authorize',
   /** Required OAuth scopes */
   REQUIRED_SCOPES: ['channel:manage:broadcast'],
-  /** OAuth response type */
-  RESPONSE_TYPE: 'code',
+  /** OAuth response type - 'token' for implicit grant flow (client-side apps) */
+  RESPONSE_TYPE: 'token',
   /** OAuth redirect URI (dynamic based on environment) */
   get REDIRECT_URI() {
     return `${window.location.origin}/auth/callback`;

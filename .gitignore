@@ -16,6 +16,7 @@ dev-dist
 
 # Environment variables
 .env
+.env.local
 
 # Playwright test results
 test-results/
