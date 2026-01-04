@@ -34,15 +34,11 @@ export interface StoredAuthToken extends TwitchAuthToken {
 }
 
 /**
- * OAuth state for PKCE flow
+ * OAuth state for implicit grant flow
  */
 export interface OAuthState {
-  /** State parameter for security */
+  /** State parameter for CSRF protection */
   state: string;
-  /** Code verifier for PKCE */
-  codeVerifier: string;
-  /** Code challenge for PKCE */
-  codeChallenge: string;
   /** Redirect URI used */
   redirectUri: string;
   /** Timestamp when flow started */
