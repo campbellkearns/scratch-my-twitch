@@ -416,7 +416,7 @@ export class TwitchAPIClient {
    */
   private async searchCachedCategories(query: string, limit: number): Promise<CachedCategory[]> {
     try {
-      const result = await this.categoryRepo.search(query, limit);
+      const result = await this.categoryRepo.searchCached(query, limit);
       return result.success && result.data ? result.data : [];
     } catch (error) {
       this.logError('Error searching cached categories', error);
