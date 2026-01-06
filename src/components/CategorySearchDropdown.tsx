@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
-import { useCategorySearch } from '@/hooks/useCategories';
+import { useCategorySearch, useCategories } from '@/hooks/useCategories';
 import type { StreamCategory } from '@/types/Profile';
 
 interface CategorySearchDropdownProps {
@@ -40,6 +40,9 @@ export function CategorySearchDropdown({
     isSearching,
     hasResults,
   } = useCategorySearch(300);
+
+  // Get all categories for showing popular/default options
+  const { popularCategories, isLoading: categoriesLoading } = useCategories();
 
   // Update input value when external value changes
   useEffect(() => {
@@ -167,55 +170,81 @@ export function CategorySearchDropdown({
               <span className="animate-spin inline-block">⟳</span>
               <p className="mt-2 text-sm">Searching categories...</p>
             </div>
-          ) : hasResults ? (
-            <ul className="py-2">
-              {results.map((category) => (
-                <li key={category.id}>
-                  <button
-                    type="button"
-                    onClick={() => handleSelectCategory(category)}
-                    className="w-full px-4 py-3 text-left hover:bg-neutral-50 transition-colors flex items-center space-x-3"
-                    role="option"
-                    aria-selected={value?.id === category.id}
-                  >
-                    {/* Category icon/artwork placeholder */}
-                    {category.boxArtUrl ? (
-                      <img
-                        src={category.boxArtUrl}
-                        alt=""
-                        className="w-10 h-14 object-cover rounded"
-                        loading="lazy"
-                      />
-                    ) : (
-                      <div className="w-10 h-14 bg-neutral-100 rounded flex items-center justify-center text-2xl">
-                        🎮
-                      </div>
-                    )}
+          ) : (() => {
+            // Determine which categories to show
+            const categoriesToShow = query && hasResults
+              ? results
+              : !query && popularCategories.length > 0
+                ? popularCategories
+                : results.length > 0
+                  ? results
+                  : [];
 
-                    <div className="flex-1 min-w-0">
-                      <p className="font-medium text-neutral-900 truncate">
-                        {category.name}
-                      </p>
-                      {value?.id === category.id && (
-                        <p className="text-xs text-green-600 mt-1">✓ Selected</p>
-                      )}
-                    </div>
-                  </button>
-                </li>
-              ))}
-            </ul>
-          ) : query ? (
-            <div className="px-4 py-8 text-center">
-              <p className="text-neutral-600 mb-2">No categories found</p>
-              <p className="text-xs text-neutral-500">
-                You can still use "{query}" as a manual entry
-              </p>
-            </div>
-          ) : (
-            <div className="px-4 py-8 text-center text-neutral-500">
-              <p className="text-sm">Start typing to search categories</p>
-            </div>
-          )}
+            return categoriesToShow.length > 0 ? (
+              <>
+                {!query && popularCategories.length > 0 && (
+                  <div className="px-4 pt-3 pb-2 border-b border-neutral-100">
+                    <p className="text-xs font-medium text-neutral-500 uppercase tracking-wide">
+                      Popular Categories
+                    </p>
+                  </div>
+                )}
+                <ul className="py-2">
+                  {categoriesToShow.map((category) => (
+                    <li key={category.id}>
+                      <button
+                        type="button"
+                        onClick={() => handleSelectCategory(category)}
+                        className="w-full px-4 py-3 text-left hover:bg-neutral-50 transition-colors flex items-center space-x-3"
+                        role="option"
+                        aria-selected={value?.id === category.id}
+                      >
+                        {/* Category icon/artwork placeholder */}
+                        {category.boxArtUrl ? (
+                          <img
+                            src={category.boxArtUrl}
+                            alt=""
+                            className="w-10 h-14 object-cover rounded"
+                            loading="lazy"
+                          />
+                        ) : (
+                          <div className="w-10 h-14 bg-neutral-100 rounded flex items-center justify-center text-2xl">
+                            🎮
+                          </div>
+                        )}
+
+                        <div className="flex-1 min-w-0">
+                          <p className="font-medium text-neutral-900 truncate">
+                            {category.name}
+                          </p>
+                          {value?.id === category.id && (
+                            <p className="text-xs text-green-600 mt-1">✓ Selected</p>
+                          )}
+                        </div>
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              </>
+            ) : query ? (
+              <div className="px-4 py-8 text-center">
+                <p className="text-neutral-600 mb-2">No categories found</p>
+                <p className="text-xs text-neutral-500">
+                  You can still use "{query}" as a manual entry
+                </p>
+              </div>
+            ) : categoriesLoading ? (
+              <div className="px-4 py-8 text-center text-neutral-500">
+                <span className="animate-spin inline-block">⟳</span>
+                <p className="mt-2 text-sm">Loading categories...</p>
+              </div>
+            ) : (
+              <div className="px-4 py-8 text-center text-neutral-500">
+                <p className="text-sm">No categories available</p>
+                <p className="text-xs mt-1">Type to search or enter manually</p>
+              </div>
+            );
+          })()}
         </div>
       )}
 

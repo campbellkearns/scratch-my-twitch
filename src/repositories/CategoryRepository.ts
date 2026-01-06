@@ -67,47 +67,94 @@ export class CategoryRepository {
   /**
    * Search categories by name (cached first, then API if needed)
    */
-  async search(query: string): Promise<RepositoryResult<StreamCategory[]>> {
+  async search(query: string, limit?: number): Promise<RepositoryResult<StreamCategory[]>> {
     try {
       // First, search in cache
-      const cachedResult = await this.searchCached(query);
-      
+      const cachedResult = await this.searchCached(query, limit);
+
       if (cachedResult.success && cachedResult.data && cachedResult.data.length > 0) {
         return cachedResult;
       }
 
-      // TODO: Phase 5 - If no cached results, search via Twitch API
-      // For now, return empty results in local mode
+      // If no cached results, search via Twitch API
+      const { getTwitchAPI } = await import('@/lib/api/twitchAPI');
+      const apiResult = await getTwitchAPI().searchCategories(query, limit);
+
+      if (apiResult.success && apiResult.data && apiResult.data.length > 0) {
+        // Convert TwitchGameResponse to StreamCategory
+        const categories: StreamCategory[] = apiResult.data.map(game => ({
+          id: game.id,
+          name: game.name,
+          boxArtUrl: game.box_art_url
+        }));
+
+        return {
+          success: true,
+          data: categories
+        };
+      }
+
+      // If API also returns no results, fallback to searching default categories
+      const defaultCategories = this.getDefaultCategories();
+      const filteredDefaults = defaultCategories.filter(category =>
+        category.name.toLowerCase().includes(query.toLowerCase())
+      );
+
+      if (limit !== undefined && limit > 0) {
+        return {
+          success: true,
+          data: filteredDefaults.slice(0, limit)
+        };
+      }
+
       return {
         success: true,
-        data: []
+        data: filteredDefaults
       };
     } catch (error) {
-      return {
-        success: false,
-        error: {
-          message: 'Failed to search categories',
-          code: 'STORAGE_ERROR',
-          details: error
-        }
-      };
+      // On error, try to return default categories as fallback
+      try {
+        const defaultCategories = this.getDefaultCategories();
+        const filteredDefaults = defaultCategories.filter(category =>
+          category.name.toLowerCase().includes(query.toLowerCase())
+        );
+
+        return {
+          success: true,
+          data: limit !== undefined && limit > 0 ? filteredDefaults.slice(0, limit) : filteredDefaults
+        };
+      } catch {
+        return {
+          success: false,
+          error: {
+            message: 'Failed to search categories',
+            code: 'STORAGE_ERROR',
+            details: error
+          }
+        };
+      }
     }
   }
 
   /**
-   * Search only in cached categories
+   * Search only in cached categories (public for use by TwitchAPIClient)
    */
-  private async searchCached(query: string): Promise<RepositoryResult<StreamCategory[]>> {
+  async searchCached(query: string, limit?: number): Promise<RepositoryResult<StreamCategory[]>> {
     try {
       const allResult = await this.getAll();
-      
+
       if (!allResult.success || !allResult.data) {
         return allResult;
       }
 
-      const filteredCategories = allResult.data.filter(category =>
+      let filteredCategories = allResult.data.filter(category =>
         category.name.toLowerCase().includes(query.toLowerCase())
       );
+
+      // Apply limit if specified
+      if (limit !== undefined && limit > 0) {
+        filteredCategories = filteredCategories.slice(0, limit);
+      }
 
       return {
         success: true,
@@ -158,6 +205,37 @@ export class CategoryRepository {
         success: false,
         error: {
           message: 'Failed to fetch category',
+          code: 'STORAGE_ERROR',
+          details: error
+        }
+      };
+    }
+  }
+
+  /**
+   * Cache a single category
+   */
+  async cache(category: StreamCategory): Promise<RepositoryResult<void>> {
+    try {
+      const db = await getDB();
+      const now = new Date();
+
+      const cachedCategory: CachedCategory = {
+        ...category,
+        cachedAt: now,
+        lastFetched: now
+      };
+
+      await db.put(this.storeName, cachedCategory);
+
+      return {
+        success: true
+      };
+    } catch (error) {
+      return {
+        success: false,
+        error: {
+          message: 'Failed to cache category',
           code: 'STORAGE_ERROR',
           details: error
         }
