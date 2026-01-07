@@ -182,6 +182,23 @@ export default function Layout(): JSX.Element {
       <main className="container mx-auto px-5 py-8 max-w-6xl">
         <Outlet />
       </main>
+
+      {/* Footer */}
+      <footer className="border-t border-neutral-200 mt-8">
+        <div className="container mx-auto px-5 py-5 max-w-6xl">
+          <div className="flex flex-col md:flex-row md:items-center md:justify-between text-sm text-neutral-500 space-y-3 md:space-y-0">
+            <p>© 2026 Scratch My Twitch</p>
+            <div className="flex items-center space-x-4">
+              <Link
+                to="/support"
+                className="text-neutral-600 hover:text-primary transition-colors"
+              >
+                Support Development
+              </Link>
+            </div>
+          </div>
+        </div>
+      </footer>
     </div>
   )
 }
