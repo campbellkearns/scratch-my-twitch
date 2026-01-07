@@ -6,6 +6,7 @@ import CreateProfile from './pages/CreateProfile';
 import EditProfile from './pages/EditProfile';
 import AuthPage from './pages/AuthPage';
 import AuthCallback from './pages/AuthCallback';
+import SupportPage from './pages/SupportPage';
 import { initializeRepositories } from './repositories';
 import './App.css';
 
@@ -35,6 +36,7 @@ function App(): JSX.Element {
         <Route index element={<Dashboard />} />
         <Route path="profile/new" element={<CreateProfile />} />
         <Route path="profile/:id/edit" element={<EditProfile />} />
+        <Route path="support" element={<SupportPage />} />
         <Route path="auth" element={<AuthPage />} />
       </Route>
       {/* OAuth callback route outside of Layout */}
