@@ -66,39 +66,14 @@ export default function SupportPage(): JSX.Element {
         <h1 className="text-4xl font-medium text-neutral-900 mb-3">
           Support Development
         </h1>
-        <p className="text-lg text-neutral-600 mb-4">
-          Scratch My Twitch is free and always will be. Your support helps us
-          maintain the app, add new features, and keep the community thriving.
+        <p className="text-lg text-neutral-600">
+          Scratch My Twitch is free and always will be. Your support helps me
+          maintain the app and add new features.
         </p>
         <p className="text-lg text-neutral-600">
           Whether it's a one-time donation or monthly support, every contribution
           makes a difference.
         </p>
-      </div>
-
-      {/* Why Support Section */}
-      <div className="mb-8">
-        <h2 className="text-2xl font-medium text-neutral-900 mb-4">
-          Your support helps with:
-        </h2>
-        <ul className="space-y-2 text-neutral-700">
-          <li className="flex items-start space-x-2">
-            <span className="text-primary">✓</span>
-            <span>Maintaining servers and infrastructure</span>
-          </li>
-          <li className="flex items-start space-x-2">
-            <span className="text-primary">✓</span>
-            <span>Adding requested features faster</span>
-          </li>
-          <li className="flex items-start space-x-2">
-            <span className="text-primary">✓</span>
-            <span>Keeping ads and paywalls away</span>
-          </li>
-          <li className="flex items-start space-x-2">
-            <span className="text-primary">✓</span>
-            <span>Supporting open source development</span>
-          </li>
-        </ul>
       </div>
 
       {/* Payment Options Grid */}
@@ -131,8 +106,30 @@ export default function SupportPage(): JSX.Element {
         </div>
       </div>
 
+      {/* Why Support Section */}
+      <div className="flex flex-col items-center mb-4">
+        <h2 className="text-2xl font-medium text-neutral-900 mb-4">
+          Your support helps with:
+        </h2>
+        <ul className="space-y-2 text-neutral-700">
+          <li className="flex items-start space-x-2">
+            <span className="text-primary">✓</span>
+            <span>Adding requested features faster</span>
+          </li>
+          <li className="flex items-start space-x-2">
+            <span className="text-primary">✓</span>
+            <span>Keeping ads and paywalls away</span>
+          </li>
+          <li className="flex items-start space-x-2">
+            <span className="text-primary">✓</span>
+            <span>Supporting open source development</span>
+          </li>
+        </ul>
+      </div>
+
+
       {/* Thank You Section */}
-      <div className="text-center py-8">
+      <div className="text-center pt-8">
         <p className="text-lg text-neutral-600">
           Thanks for supporting the future of Scratch My Twitch!
         </p>
