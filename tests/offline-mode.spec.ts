@@ -1,9 +1,17 @@
-import { test, expect } from '@playwright/test';
+import { test, expect, Page } from '@playwright/test';
 
 /**
  * Offline Mode Tests
  * Tests IndexedDB storage, offline profile CRUD, and sync functionality
  */
+
+/** Select a category from the search dropdown */
+async function selectCategory(page: Page, query: string) {
+  const categoryInput = page.locator('input[placeholder*="Search for a category" i]');
+  await categoryInput.fill(query);
+  await page.waitForTimeout(500);
+  await page.locator(`button[role="option"]:has-text("${query}")`).first().click();
+}
 
 test.describe('Offline Functionality', () => {
   test.beforeEach(async ({ page }) => {
@@ -13,9 +21,10 @@ test.describe('Offline Functionality', () => {
 
   test('should store profiles in IndexedDB', async ({ page }) => {
     // Create a profile
-    await page.click('a:has-text("New Profile"), a:has-text("Create Profile")');
+    await page.locator('a[href="/profile/new"]').filter({ visible: true }).first().click();
     await page.fill('input[name="name"]', 'Offline Test Profile');
     await page.fill('input[name="title"]', 'Testing offline storage');
+    await selectCategory(page, 'Just Chatting');
     await page.click('button[type="submit"]');
     await page.waitForURL('/');
 
@@ -49,9 +58,10 @@ test.describe('Offline Functionality', () => {
     await context.setOffline(true);
 
     // Try to create a profile
-    await page.click('a:has-text("New Profile"), a:has-text("Create Profile")');
+    await page.locator('a[href="/profile/new"]').filter({ visible: true }).first().click();
     await page.fill('input[name="name"]', 'Offline Created Profile');
     await page.fill('input[name="title"]', 'Created while offline');
+    await selectCategory(page, 'Just Chatting');
 
     // Submit should work (stored locally)
     await page.click('button[type="submit"]');
@@ -68,9 +78,10 @@ test.describe('Offline Functionality', () => {
 
   test('should edit profiles while offline', async ({ page, context }) => {
     // First create a profile while online
-    await page.click('a:has-text("New Profile"), a:has-text("Create Profile")');
+    await page.locator('a[href="/profile/new"]').filter({ visible: true }).first().click();
     await page.fill('input[name="name"]', 'Profile for Offline Edit');
     await page.fill('input[name="title"]', 'Original offline title');
+    await selectCategory(page, 'Just Chatting');
     await page.click('button[type="submit"]');
     await page.waitForURL('/');
 
@@ -99,9 +110,10 @@ test.describe('Offline Functionality', () => {
     const hasProfiles = await page.locator('article.scandi-card').count() > 0;
 
     if (!hasProfiles) {
-      await page.click('a:has-text("New Profile"), a:has-text("Create Profile")');
+      await page.locator('a[href="/profile/new"]').filter({ visible: true }).first().click();
       await page.fill('input[name="name"]', 'Offline Listing Test');
       await page.fill('input[name="title"]', 'For offline listing');
+      await selectCategory(page, 'Just Chatting');
       await page.click('button[type="submit"]');
       await page.waitForURL('/');
     }
@@ -149,9 +161,10 @@ test.describe('Offline Functionality', () => {
     const hasProfiles = await page.locator('article.scandi-card').count() > 0;
 
     if (!hasProfiles) {
-      await page.click('a:has-text("New Profile"), a:has-text("Create Profile")');
+      await page.locator('a[href="/profile/new"]').filter({ visible: true }).first().click();
       await page.fill('input[name="name"]', 'API Test Profile');
       await page.fill('input[name="title"]', 'For API testing');
+      await selectCategory(page, 'Just Chatting');
       await page.click('button[type="submit"]');
       await page.waitForURL('/');
     }

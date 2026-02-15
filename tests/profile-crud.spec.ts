@@ -62,7 +62,7 @@ test.describe('Profile Management', () => {
 
     if (profileCards === 0) {
       // Create a test profile first
-      await page.click('a:has-text("New Profile"), a:has-text("Create Profile")');
+      await page.locator('a[href="/profile/new"]').filter({ visible: true }).first().click();
       await page.fill('input[name="name"]', 'Profile to Edit');
       await page.fill('input[name="title"]', 'Original Title');
 
@@ -107,7 +107,7 @@ test.describe('Profile Management', () => {
 
     if (profileCards === 0) {
       // Create a test profile first
-      await page.click('a:has-text("New Profile"), a:has-text("Create Profile")');
+      await page.locator('a[href="/profile/new"]').filter({ visible: true }).first().click();
       await page.fill('input[name="name"]', 'Profile to Delete');
       await page.fill('input[name="title"]', 'Will be deleted');
 
