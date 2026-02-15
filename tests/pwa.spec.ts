@@ -124,7 +124,7 @@ test.describe('PWA Features', () => {
     await expect(title).toBeVisible();
 
     // Check that create button is accessible
-    const createButton = page.locator('a:has-text("New Profile"), a:has-text("Create")');
+    const createButton = page.locator('a[href="/profile/new"]').filter({ visible: true });
     await expect(createButton.first()).toBeVisible();
   });
 
@@ -148,7 +148,7 @@ test.describe('PWA Features', () => {
     await page.waitForSelector('h1:has-text("Stream Profiles")');
 
     // Try tapping the create button
-    const createButton = page.locator('a:has-text("New Profile"), a:has-text("Create")').first();
+    const createButton = page.locator('a[href="/profile/new"]').filter({ visible: true }).first();
 
     if (await createButton.isVisible()) {
       await createButton.tap();

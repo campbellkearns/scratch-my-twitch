@@ -1,9 +1,17 @@
-import { test, expect } from '@playwright/test';
+import { test, expect, Page } from '@playwright/test';
 
 /**
  * Dynamic Title Templating Tests
  * Tests {DAY} and {YYYY-MM-DD} template variable replacement
  */
+
+/** Select a category from the search dropdown */
+async function selectCategory(page: Page, query: string) {
+  const categoryInput = page.locator('input[placeholder*="Search for a category" i]');
+  await categoryInput.fill(query);
+  await page.waitForTimeout(500);
+  await page.locator(`button[role="option"]:has-text("${query}")`).first().click();
+}
 
 test.describe('Dynamic Title Templating', () => {
   test.beforeEach(async ({ page }) => {
@@ -16,9 +24,10 @@ test.describe('Dynamic Title Templating', () => {
     const currentDay = new Date().toLocaleDateString('en-US', { weekday: 'long' });
 
     // Create profile with {DAY} template
-    await page.click('a:has-text("New Profile"), a:has-text("Create Profile")');
+    await page.locator('a[href="/profile/new"]').filter({ visible: true }).first().click();
     await page.fill('input[name="name"]', 'Day Template Test');
     await page.fill('input[name="title"]', 'Streaming on {DAY}');
+    await selectCategory(page, 'Just Chatting');
     await page.click('button[type="submit"]');
     await page.waitForURL('/');
 
@@ -32,9 +41,10 @@ test.describe('Dynamic Title Templating', () => {
     const currentDate = new Date().toISOString().split('T')[0];
 
     // Create profile with {YYYY-MM-DD} template
-    await page.click('a:has-text("New Profile"), a:has-text("Create Profile")');
+    await page.locator('a[href="/profile/new"]').filter({ visible: true }).first().click();
     await page.fill('input[name="name"]', 'Date Template Test');
     await page.fill('input[name="title"]', 'Stream {YYYY-MM-DD}');
+    await selectCategory(page, 'Just Chatting');
     await page.click('button[type="submit"]');
     await page.waitForURL('/');
 
@@ -48,9 +58,10 @@ test.describe('Dynamic Title Templating', () => {
     const currentDate = new Date().toISOString().split('T')[0];
 
     // Create profile with both templates
-    await page.click('a:has-text("New Profile"), a:has-text("Create Profile")');
+    await page.locator('a[href="/profile/new"]').filter({ visible: true }).first().click();
     await page.fill('input[name="name"]', 'Multiple Templates Test');
     await page.fill('input[name="title"]', '{DAY} Stream - {YYYY-MM-DD}');
+    await selectCategory(page, 'Just Chatting');
     await page.click('button[type="submit"]');
     await page.waitForURL('/');
 
@@ -61,9 +72,10 @@ test.describe('Dynamic Title Templating', () => {
 
   test('should not replace invalid template syntax', async ({ page }) => {
     // Create profile with invalid template
-    await page.click('a:has-text("New Profile"), a:has-text("Create Profile")');
+    await page.locator('a[href="/profile/new"]').filter({ visible: true }).first().click();
     await page.fill('input[name="name"]', 'Invalid Template Test');
     await page.fill('input[name="title"]', 'Stream {INVALID} {day}');
+    await selectCategory(page, 'Just Chatting');
     await page.click('button[type="submit"]');
     await page.waitForURL('/');
 
@@ -74,9 +86,10 @@ test.describe('Dynamic Title Templating', () => {
 
   test('should show original template on hover/tooltip', async ({ page }) => {
     // Create profile with template
-    await page.click('a:has-text("New Profile"), a:has-text("Create Profile")');
+    await page.locator('a[href="/profile/new"]').filter({ visible: true }).first().click();
     await page.fill('input[name="name"]', 'Tooltip Test');
     await page.fill('input[name="title"]', 'Daily {DAY} Stream');
+    await selectCategory(page, 'Just Chatting');
     await page.click('button[type="submit"]');
     await page.waitForURL('/');
 
@@ -93,9 +106,10 @@ test.describe('Dynamic Title Templating', () => {
     const currentDay = new Date().toLocaleDateString('en-US', { weekday: 'long' });
 
     // Create profile without template
-    await page.click('a:has-text("New Profile"), a:has-text("Create Profile")');
+    await page.locator('a[href="/profile/new"]').filter({ visible: true }).first().click();
     await page.fill('input[name="name"]', 'Edit Template Test');
     await page.fill('input[name="title"]', 'Regular Title');
+    await selectCategory(page, 'Just Chatting');
     await page.click('button[type="submit"]');
     await page.waitForURL('/');
 
