@@ -1,6 +1,6 @@
 # Playwright Test Suite
 
-Automated end-to-end tests for Scratch My Twitch, covering all features from the EXE-19 manual testing checklist.
+Automated end-to-end tests for Stream Chameleon, covering all features from the EXE-19 manual testing checklist.
 
 ## Test Coverage
 

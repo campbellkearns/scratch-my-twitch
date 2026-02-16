@@ -30,7 +30,7 @@ test.describe('Offline Functionality', () => {
 
     // Check IndexedDB for the profile
     const hasProfile = await page.evaluate(async () => {
-      const request = indexedDB.open('ScratchMyTwitch', 1);
+      const request = indexedDB.open('StreamChameleonDB', 1);
 
       return new Promise((resolve) => {
         request.onsuccess = (event) => {

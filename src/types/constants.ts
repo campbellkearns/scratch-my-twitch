@@ -9,12 +9,13 @@
  */
 export const APP_CONFIG = {
   /** Application name */
-  NAME: 'Scratch My Twitch',
+  NAME: 'Stream Chameleon',
   /** Application version */
   VERSION: '0.1.0',
   /** Application description */
   DESCRIPTION: 'One-click stream profile management for Twitch streamers',
   /** GitHub repository URL */
+  /** TODO: update URL when GitHub repo is renamed */
   REPOSITORY: 'https://github.com/campbellkearns/scratch-my-twitch'
 } as const;
 
@@ -75,7 +76,7 @@ export const API_CONFIG = {
  */
 export const STORAGE_KEYS = {
   /** IndexedDB database name */
-  DB_NAME: 'ScratchMyTwitchDB',
+  DB_NAME: 'StreamChameleonDB',
   /** Database version */
   DB_VERSION: 1,
   /** Profiles object store */

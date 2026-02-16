@@ -1,7 +1,7 @@
 import { defineConfig, devices } from '@playwright/test';
 
 /**
- * Playwright configuration for Scratch My Twitch
+ * Playwright configuration for Stream Chameleon
  * Tests the PWA functionality, offline mode, and core features
  */
 export default defineConfig({

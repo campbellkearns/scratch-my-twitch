@@ -54,9 +54,9 @@ export default defineConfig({
                 "pwa-512x512-maskable.svg",
             ],
             manifest: {
-                id: "scratch-my-twitch-pwa",
-                name: "Scratch My Twitch - Stream Profile Manager",
-                short_name: "Scratch My Twitch",
+                id: "stream-chameleon-pwa",
+                name: "Stream Chameleon - Stream Profile Manager",
+                short_name: "Stream Chameleon",
                 description: "One-click Twitch stream setup with custom profiles. Manage your streaming categories, titles, and tags instantly. Perfect for content creators who stream varied content.",
                 theme_color: "#86EFAC",
                 background_color: "#FAFAF9",
