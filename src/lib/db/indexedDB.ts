@@ -1,5 +1,5 @@
 /**
- * IndexedDB wrapper for Scratch My Twitch
+ * IndexedDB wrapper for Stream Chameleon
  * Provides a clean interface for local data storage with proper error handling
  */
 

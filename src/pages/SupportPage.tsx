@@ -25,15 +25,15 @@ const paymentOptions: PaymentOption[] = [
 export default function SupportPage(): JSX.Element {
   useEffect(() => {
     // Set page title and meta tags for social sharing
-    document.title = 'Support Development - Scratch My Twitch'
+    document.title = 'Support Development - Stream Chameleon'
 
     const metaTags = [
-      { property: 'og:title', content: 'Support Scratch My Twitch' },
-      { property: 'og:description', content: 'Help keep Scratch My Twitch free and open. Support development with a donation.' },
+      { property: 'og:title', content: 'Support Stream Chameleon' },
+      { property: 'og:description', content: 'Help keep Stream Chameleon free and open. Support development with a donation.' },
       { property: 'og:type', content: 'website' },
       { name: 'twitter:card', content: 'summary' },
-      { name: 'twitter:title', content: 'Support Scratch My Twitch' },
-      { name: 'twitter:description', content: 'Keep Scratch My Twitch free for everyone' }
+      { name: 'twitter:title', content: 'Support Stream Chameleon' },
+      { name: 'twitter:description', content: 'Keep Stream Chameleon free for everyone' }
     ]
 
     metaTags.forEach(({ property, name, content }) => {
@@ -55,7 +55,7 @@ export default function SupportPage(): JSX.Element {
 
     // Cleanup on unmount
     return () => {
-      document.title = 'Scratch My Twitch'
+      document.title = 'Stream Chameleon'
     }
   }, [])
 
@@ -67,7 +67,7 @@ export default function SupportPage(): JSX.Element {
           Support Development
         </h1>
         <p className="text-lg text-neutral-600">
-          Scratch My Twitch is free and always will be. Your support helps me
+          Stream Chameleon is free and always will be. Your support helps me
           maintain the app and add new features.
         </p>
         <p className="text-lg text-neutral-600">
@@ -131,7 +131,7 @@ export default function SupportPage(): JSX.Element {
       {/* Thank You Section */}
       <div className="text-center pt-8">
         <p className="text-lg text-neutral-600">
-          Thanks for supporting the future of Scratch My Twitch!
+          Thanks for supporting the future of Stream Chameleon!
         </p>
         <p className="text-neutral-500 mt-2">
           Together, we're building the best stream management tool for Twitch creators.

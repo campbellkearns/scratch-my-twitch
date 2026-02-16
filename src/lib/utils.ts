@@ -14,7 +14,7 @@ export const config: AppConfig = {
     ]
   },
   storage: {
-    dbName: 'scratch-my-twitch',
+    dbName: 'stream-chameleon',
     dbVersion: 1
   }
 }
