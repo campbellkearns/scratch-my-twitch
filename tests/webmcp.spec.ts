@@ -137,6 +137,47 @@ async function seedFixtures(
   }, params);
 }
 
+/**
+ * Mocks `helix/channels` for both call sites that share the URL: the PATCH under test, and the
+ * unrelated GET the "Now on your channel" status card fires on every authenticated mount. Only
+ * PATCH bodies are captured — the status card's GET must not be mistaken for the profile apply.
+ */
+async function mockChannelsEndpoint(page: Page): Promise<Array<Record<string, unknown> | null>> {
+  const patchBodies: Array<Record<string, unknown> | null> = [];
+  await page.route('**/api.twitch.tv/helix/channels**', async (route) => {
+    const request = route.request();
+    if (request.method() === 'PATCH') {
+      patchBodies.push(request.postDataJSON() as Record<string, unknown> | null);
+      await route.fulfill({ status: 200, contentType: 'application/json', body: '{}' });
+      return;
+    }
+    // GET: the status card's own poll — stub a harmless offline channel so it resolves instead
+    // of hanging, without affecting the PATCH assertions below.
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({
+        data: [
+          {
+            broadcaster_id: '987654321',
+            broadcaster_login: 'playwrightstreamer',
+            broadcaster_name: 'Playwright Streamer',
+            broadcaster_language: 'en',
+            game_id: '',
+            game_name: '',
+            title: '',
+            delay: 0,
+            tags: [],
+            content_classification_labels: [],
+            is_branded_content: false,
+          },
+        ],
+      }),
+    });
+  });
+  return patchBodies;
+}
+
 /** Reads the registered tool names, sorted, from the mock registry — `[]` before registration. */
 function registeredToolNames(page: Page): Promise<string[]> {
   return page.evaluate(() => {
@@ -187,12 +228,7 @@ test.describe('WebMCP agent tools', () => {
       tags: ['coding', 'webdev'],
     };
     await seedFixtures(page, { tokenObtainedAtMs: now, tokenExpiresAtMs: now + 60 * 60 * 1000, profile });
-
-    const channelUpdateBodies: Array<Record<string, unknown>> = [];
-    await page.route('**/api.twitch.tv/helix/channels**', async (route) => {
-      channelUpdateBodies.push(route.request().postDataJSON() as Record<string, unknown>);
-      await route.fulfill({ status: 200, contentType: 'application/json', body: '{}' });
-    });
+    const channelUpdateBodies = await mockChannelsEndpoint(page);
 
     await page.goto('/');
     await expect.poll(() => registeredToolNames(page), { timeout: 15_000 }).toEqual(TOOL_NAMES);
@@ -234,12 +270,7 @@ test.describe('WebMCP agent tools', () => {
       tags: ['writing'],
     };
     await seedFixtures(page, { tokenObtainedAtMs, tokenExpiresAtMs, profile });
-
-    const channelUpdateBodies: unknown[] = [];
-    await page.route('**/api.twitch.tv/helix/channels**', async (route) => {
-      channelUpdateBodies.push(route.request().postDataJSON());
-      await route.fulfill({ status: 200, contentType: 'application/json', body: '{}' });
-    });
+    const channelUpdateBodies = await mockChannelsEndpoint(page);
 
     await page.goto('/');
     await expect.poll(() => registeredToolNames(page), { timeout: 15_000 }).toEqual(TOOL_NAMES);
