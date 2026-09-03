@@ -25,6 +25,45 @@ function simulateOffline(context: BrowserContext): void {
   context.route(/^https?:\/\/(?!localhost|127\.0\.0\.1).*$/, (route) => route.abort('failed'));
 }
 
+/**
+ * Seed a valid auth token into the IndexedDB auth store — the exact record
+ * shape storeToken writes (twitchAuth.ts), keyed 'token' in the 'auth'
+ * store. Health is optimistic while unauthenticated, so the banner and
+ * disabled-Apply assertions need a stored token to be reachable at all;
+ * expiresAt is now + 1h, clearing the 5-minute validity buffer.
+ */
+async function seedAuthToken(page: Page): Promise<void> {
+  await page.evaluate(async () => {
+    const now = Date.now();
+    const token = {
+      access_token: 'playwright_seed_token',
+      token_type: 'bearer',
+      expires_in: 3600,
+      scope: ['channel:manage:broadcast'],
+      obtainedAt: new Date(now),
+      expiresAt: new Date(now + 60 * 60 * 1000),
+      userId: 'playwright_test_user',
+    };
+    const db = await new Promise<IDBDatabase>((resolve, reject) => {
+      const request = indexedDB.open('StreamChameleonDB');
+      request.onsuccess = () => resolve(request.result);
+      request.onerror = () => reject(request.error);
+    });
+    await new Promise<void>((resolve, reject) => {
+      const transaction = db.transaction(['auth'], 'readwrite');
+      transaction.objectStore('auth').put({
+        key: 'token',
+        value: token,
+        updatedAt: new Date(now),
+      });
+      transaction.oncomplete = () => resolve();
+      transaction.onerror = () => reject(transaction.error);
+      transaction.onabort = () => reject(transaction.error);
+    });
+    db.close();
+  });
+}
+
 test.describe('Offline Functionality', () => {
   test.beforeEach(async ({ page }) => {
     await page.goto('/');
@@ -139,24 +178,24 @@ test.describe('Offline Functionality', () => {
   });
 
   test('should handle API unavailability gracefully', async ({ page, context }) => {
-    // Go offline
-    await context.setOffline(true);
+    // Health is only pessimistic with a stored token: unauthenticated,
+    // checkAPIHealth deliberately short-circuits to isAvailable: true
+    await seedAuthToken(page);
+
+    // Cut external origins; the localhost document still reloads
+    simulateOffline(context);
 
     // Reload to simulate app starting offline
     await page.reload();
     await page.waitForSelector('h1:has-text("Stream Profiles")');
 
-    // Should show offline warning or status
-    const hasOfflineIndicator = await page.locator(
-      'text=/offline/i, text=/unavailable/i, text=/no connection/i, [title*="offline" i]'
-    ).count() > 0;
+    // The warning banner appears when the health check fails
+    await expect(page.locator('text=Unable to connect to Twitch services')).toBeVisible();
 
-    // App should still be functional for local operations
-    const canNavigate = await page.locator('a:has-text("New Profile")').isVisible();
-    expect(canNavigate).toBeTruthy();
-
-    // Go back online
-    await context.setOffline(false);
+    // App should still be functional for local operations — New Profile stays navigable
+    const newProfileLink = page.locator('a[href="/profile/new"]').filter({ visible: true }).first();
+    await expect(newProfileLink).toBeVisible();
+    await expect(newProfileLink).toHaveAttribute('href', '/profile/new');
   });
 
   test('should disable API-dependent actions when offline', async ({ page, context }) => {
@@ -172,22 +211,19 @@ test.describe('Offline Functionality', () => {
       await page.waitForURL('/');
     }
 
-    // Go offline
-    await context.setOffline(true);
+    // Health is only pessimistic with a stored token (see seedAuthToken)
+    await seedAuthToken(page);
+
+    // Cut external origins; the localhost document still reloads
+    simulateOffline(context);
     await page.reload();
     await page.waitForSelector('h1:has-text("Stream Profiles")');
 
-    // "Apply Profile" button should be disabled or show warning
+    // The warning banner appears and "Apply Profile" is disabled
+    await expect(page.locator('text=Unable to connect to Twitch services')).toBeVisible();
+
     const applyButton = page.locator('button:has-text("Apply Profile")').first();
-
-    if (await applyButton.isVisible()) {
-      const isDisabled = await applyButton.isDisabled();
-      const hasWarning = await page.locator('text=/Unable to connect/i, text=/disabled/i').count() > 0;
-
-      expect(isDisabled || hasWarning).toBeTruthy();
-    }
-
-    // Go back online
-    await context.setOffline(false);
+    await expect(applyButton).toBeVisible();
+    await expect(applyButton).toBeDisabled();
   });
 });
