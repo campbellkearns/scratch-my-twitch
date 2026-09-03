@@ -16,7 +16,7 @@ export const APP_CONFIG = {
   DESCRIPTION: 'One-click stream profile management for Twitch streamers',
   /** GitHub repository URL */
   /** TODO: update URL when GitHub repo is renamed */
-  REPOSITORY: 'https://github.com/campbellkearns/scratch-my-twitch'
+  REPOSITORY: 'https://github.com/campbellkearns/stream-chameleon'
 } as const;
 
 /**
