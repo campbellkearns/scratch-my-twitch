@@ -148,7 +148,8 @@ export function processTitle(template: string): ProcessedTitle {
 
   // Replace date template
   if (processed.includes(TITLE_TEMPLATES.DATE)) {
-    const dateStr = now.toISOString().split('T')[0]; // YYYY-MM-DD
+    // Local calendar day so {YYYY-MM-DD} agrees with {DAY} near midnight in non-UTC timezones
+    const dateStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`; // YYYY-MM-DD
     replacements[TITLE_TEMPLATES.DATE] = dateStr;
     processed = processed.replace(new RegExp(escapeRegExp(TITLE_TEMPLATES.DATE), 'g'), dateStr);
   }
