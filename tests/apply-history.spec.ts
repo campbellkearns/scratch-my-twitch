@@ -144,6 +144,12 @@ test.describe('Apply history recording', () => {
     const channelUpdateBodies: Array<Record<string, unknown>> = [];
 
     await page.route('**/api.twitch.tv/helix/channels**', async (route) => {
+      // Only the apply verb is the wire truth under test — the channel-status
+      // card's GET must not enter the capture list (postDataJSON() is null on GETs).
+      if (route.request().method() !== 'PATCH') {
+        await route.fulfill({ status: 200, contentType: 'application/json', body: '{}' });
+        return;
+      }
       const body = route.request().postDataJSON() as Record<string, unknown>;
       channelUpdateBodies.push(body);
       await route.fulfill({ status: 200, contentType: 'application/json', body: '{}' });
@@ -234,6 +240,10 @@ test.describe('Apply history recording', () => {
     let patchCount = 0;
 
     await page.route('**/api.twitch.tv/helix/channels**', async (route) => {
+      if (route.request().method() !== 'PATCH') {
+        await route.fulfill({ status: 200, contentType: 'application/json', body: '{}' });
+        return;
+      }
       patchCount += 1;
       await route.fulfill({
         status: 500,
