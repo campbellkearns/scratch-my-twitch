@@ -140,7 +140,7 @@ export function CategorySearchDropdown({
           className={`scandi-input w-full pr-20 ${error ? 'border-red-300 bg-red-50' : ''}`}
           placeholder="Search for a category..."
           disabled={disabled}
-          required={required}
+          aria-required={required}
           autoComplete="off"
           aria-autocomplete="list"
           aria-controls="category-dropdown"
