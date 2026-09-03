@@ -206,8 +206,14 @@ export const useCategorySearch = (debounceMs: number = 300) => {
 
   // Debounced search effect
   useEffect(() => {
+    // Discard stale responses: when the query changes (or the component
+    // unmounts), this effect's cleanup flips `ignore`, so an earlier, slower
+    // search can no longer overwrite the latest query's results.
+    let ignore = false;
+
     if (!query.trim()) {
       setResults(categories.slice(0, 10)); // Show first 10 when no query
+      setIsSearching(false); // No search is in flight for an empty query
       return;
     }
 
@@ -215,16 +221,23 @@ export const useCategorySearch = (debounceMs: number = 300) => {
     const timeoutId = setTimeout(async () => {
       try {
         const searchResults = await searchCategories(query);
+        if (ignore) return;
         setResults(searchResults.slice(0, 10)); // Limit results
       } catch (error) {
         console.error('Search error:', error);
+        if (ignore) return;
         setResults([]);
       } finally {
-        setIsSearching(false);
+        if (!ignore) {
+          setIsSearching(false);
+        }
       }
     }, debounceMs);
 
-    return () => clearTimeout(timeoutId);
+    return () => {
+      ignore = true;
+      clearTimeout(timeoutId);
+    };
   }, [query, searchCategories, categories, debounceMs]);
 
   return {
