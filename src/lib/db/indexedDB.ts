@@ -64,6 +64,12 @@ export class IndexedDBWrapper {
           db.createObjectStore(STORAGE_KEYS.PREFERENCES_STORE, { keyPath: 'key' });
         }
       };
+
+      request.onblocked = () => {
+        // Another connection holds an older version and blocks the upgrade;
+        // the open can still succeed once it closes, so only log.
+        console.warn(`IndexedDB open blocked for "${this.dbName}": close other tabs using an older version`);
+      };
     });
   }
 
