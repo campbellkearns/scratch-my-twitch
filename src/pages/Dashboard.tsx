@@ -1,6 +1,9 @@
+import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useProfiles } from '@/hooks/useProfiles'
+import { useApplyHistory } from '@/hooks/useApplyHistory'
 import { ChannelStatusCard } from '@/components/ChannelStatusCard'
+import { RecentApplicationsStrip } from '@/components/RecentApplicationsStrip'
 import { useAPIHealth } from '@/hooks/useAPIHealth'
 import { processTitle } from '@/types/ProfileUtils'
 import { APIStatusIndicator } from '@/components/APIStatus'
@@ -24,6 +27,18 @@ export default function Dashboard(): JSX.Element {
     getStatusMessage
   } = useAPIHealth()
 
+  // C1: recent-applications strip — one hook instance owns the history data
+  // and the replay actions; applies made outside the strip (grid Apply
+  // button) call refreshHistory so the strip never shows stale rows.
+  const history = useApplyHistory()
+  // Bumped after a successful replay so the status card refetches (forced,
+  // bypassing its 30s throttle) and reflects the change immediately.
+  const [statusRefreshNonce, setStatusRefreshNonce] = useState(0)
+
+  const handleReplaySuccess = () => {
+    setStatusRefreshNonce(nonce => nonce + 1)
+  }
+
   const handleDeleteProfile = async (id: string, name: string) => {
     if (window.confirm(`Are you sure you want to delete "${name}"?`)) {
       const success = await deleteProfile(id)
@@ -39,6 +54,9 @@ export default function Dashboard(): JSX.Element {
     clearError()
     
     const success = await applyProfile(profile)
+    // The record landed in the history store either way — the strip must
+    // show it regardless of the apply's outcome.
+    await history.refreshHistory()
     if (success) {
       const processedTitle = processTitle(profile.title)
       // Show success notification
@@ -140,7 +158,11 @@ export default function Dashboard(): JSX.Element {
       </div>
 
       {/* C2: live channel-status card — what is actually set right now */}
-      <ChannelStatusCard />
+      <ChannelStatusCard refreshNonce={statusRefreshNonce} />
+
+      {/* C1: recent-applications strip — what the applies actually sent,
+          with one-tap Apply-again / Revert replays of the stored payload */}
+      <RecentApplicationsStrip history={history} onReplaySuccess={handleReplaySuccess} />
 
       {isEmpty ? (
         <div className="text-center py-16">

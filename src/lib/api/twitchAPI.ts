@@ -84,8 +84,30 @@ export class TwitchAPIClient {
 
   /**
    * Apply a stream profile to update channel information
+   *
+   * Builds the wire payload in one place and PATCHes it. The replay surface
+   * (Apply-again / Revert) calls applySentPayload directly with the stored
+   * payload, so a replay can never drift from a re-derived body.
    */
   async applyProfile(profile: StreamProfile): Promise<APIResult<SentChannelPayload>> {
+    return this.patchChannel(buildSentPayload(profile), profile.name);
+  }
+
+  /**
+   * Re-apply a recorded wire-truth payload exactly as stored — never
+   * re-derived from the profile's current state, which may have been edited
+   * or deleted since the record was written.
+   */
+  async applySentPayload(payload: SentChannelPayload, profileName: string): Promise<APIResult<SentChannelPayload>> {
+    return this.patchChannel(payload, profileName);
+  }
+
+  /**
+   * The single place a channel PATCH body is built and sent. game_id is
+   * omitted when the payload's gameId is null (manual category) so it never
+   * reaches Twitch on any path — live apply or replay.
+   */
+  private async patchChannel(payload: SentChannelPayload, profileName: string): Promise<APIResult<SentChannelPayload>> {
     try {
       // Get authenticated user and token
       const [user, token] = await Promise.all([
@@ -103,23 +125,17 @@ export class TwitchAPIClient {
         };
       }
 
-      // Single source of truth for what goes on the wire — the returned
-      // payload and the PATCH body are the same object's fields.
-      const sentPayload = buildSentPayload(profile);
-
-      // Manual categories carry a synthetic id — omit game_id so it never
-      // reaches Twitch (which rejects non-numeric ids).
       const updateRequest: UpdateChannelRequest = {
-        title: sentPayload.title,
-        tags: sentPayload.tags
+        title: payload.title,
+        tags: payload.tags
       };
 
-      if (sentPayload.gameId !== null) {
-        updateRequest.game_id = sentPayload.gameId;
+      if (payload.gameId !== null) {
+        updateRequest.game_id = payload.gameId;
       }
 
       this.log('Applying profile to Twitch', { 
-        profileName: profile.name,
+        profileName,
         userId: user.id,
         updateRequest 
       });
@@ -154,11 +170,11 @@ export class TwitchAPIClient {
         };
       }
 
-      this.log('Stream updated successfully', { profileName: profile.name });
+      this.log('Stream updated successfully', { profileName });
 
       return {
         success: true,
-        data: sentPayload,
+        data: payload,
         rateLimit
       };
 
