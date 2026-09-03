@@ -1,6 +1,6 @@
 import { beforeEach, afterEach, describe, expect, it, vi } from 'vitest';
 import type { APIResult } from '@/lib/api/twitchAPI';
-import type { StreamProfile } from '@/types/Profile';
+import type { StreamCategory, StreamProfile } from '@/types/Profile';
 import { findProfile } from './profileMatch';
 import { createStreamProfileTools, type StreamProfileToolDeps } from './streamProfileTools';
 
@@ -79,6 +79,7 @@ describe('findProfile', () => {
 describe('stream profile tools', () => {
   let profiles: StreamProfile[];
   let applyProfile: ReturnType<typeof vi.fn>;
+  let resolveCategory: ReturnType<typeof vi.fn>;
   let deps: StreamProfileToolDeps;
   let tools: ReturnType<typeof createStreamProfileTools>;
 
@@ -88,11 +89,17 @@ describe('stream profile tools', () => {
     return found;
   };
 
+  /** The one name `resolveCategory`'s default mock resolves, mirroring a real Twitch game. */
+  const RESOLVABLE_CATEGORY: StreamCategory = { id: '1469308723', name: 'Software Development' };
+
   beforeEach(() => {
     vi.useFakeTimers();
     profiles = [makeProfile({ id: '1' }), makeProfile({ id: '2', name: 'Coding Stream', tags: ['live'] })];
     applyProfile = vi.fn<(profile: StreamProfile) => Promise<APIResult<boolean>>>(async () => success());
-    deps = { getProfiles: () => profiles, applyProfile };
+    resolveCategory = vi.fn<(name: string) => Promise<StreamCategory | null>>(async name =>
+      name === RESOLVABLE_CATEGORY.name ? RESOLVABLE_CATEGORY : null,
+    );
+    deps = { getProfiles: () => profiles, applyProfile, resolveCategory };
     tools = createStreamProfileTools(deps);
   });
 
@@ -249,9 +256,33 @@ describe('stream profile tools', () => {
       });
     });
 
-    it('keeps the current category when none is given', async () => {
+    it('resolves a category name to its real game_id via CategoryRepository', async () => {
+      await tool('update_stream_details').execute({ title: 'Live coding', category: 'Software Development' });
+
+      expect(resolveCategory).toHaveBeenCalledWith('Software Development');
+      const sentCategory = applyProfile.mock.calls[0][0].category;
+      expect(sentCategory).toEqual(RESOLVABLE_CATEGORY);
+      expect(sentCategory.manual).not.toBe(true);
+    });
+
+    it('rejects a category name CategoryRepository has no match for', async () => {
+      const result = await tool('update_stream_details').execute({
+        title: 'Live coding',
+        category: 'Not A Real Category',
+      });
+
+      expect(result).toEqual({
+        ok: false,
+        kind: 'validation',
+        message: 'No category found matching "Not A Real Category"',
+      });
+      expect(applyProfile).not.toHaveBeenCalled();
+    });
+
+    it('keeps the current category when none is given, without sending game_id', async () => {
       await tool('update_stream_details').execute({ title: 'Just chatting today' });
 
+      expect(resolveCategory).not.toHaveBeenCalled();
       const sent = applyProfile.mock.calls[0][0];
       expect(sent.category.manual).toBe(true);
       expect(sent.category.id.startsWith('manual:')).toBe(true);

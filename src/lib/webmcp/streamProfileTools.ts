@@ -33,6 +33,11 @@ export interface StreamProfileToolDeps {
   getProfiles: () => readonly StreamProfile[];
   /** The existing profile-application path (`twitchAPI.applyProfile`). */
   applyProfile: (profile: StreamProfile) => Promise<APIResult<boolean>>;
+  /**
+   * Resolves a category name to its cached/live Twitch entry (`CategoryRepository.search`),
+   * or `null` when nothing matches. Injected so tests don't need IndexedDB or the Twitch API.
+   */
+  resolveCategory: (name: string) => Promise<StreamCategory | null>;
 }
 
 /** Parsed, validated arguments for `update_stream_details`. */
@@ -134,15 +139,24 @@ function parseUpdateFields(input: Record<string, unknown>): UpdateFields | Retur
 }
 
 /**
- * Builds the category for a direct update.
+ * Resolves the category for a direct update.
  *
- * Both the named and the omitted case produce a manual category, whose synthetic id makes
- * `applyProfile` omit `game_id` — so a direct update never sends an unresolved name to Helix and
- * never clears the current category. Resolving a name to a real Twitch `game_id` is deliverable 3.
+ * Omitting a category keeps the current one: it produces a manual category whose synthetic id
+ * makes `applyProfile` omit `game_id`, the same guard the Dashboard relies on. Naming a category
+ * resolves it through `CategoryRepository.search` to a real Twitch `game_id` — an unresolved name
+ * is a validation failure rather than a silent manual fallback, because sending it through as
+ * manual would leave the channel's category unchanged while telling the agent it succeeded.
  */
-function directUpdateCategory(name: string | undefined): StreamCategory {
-  const categoryName = name ?? '';
-  return { id: manualCategoryId(categoryName), name: categoryName, manual: true };
+async function resolveDirectUpdateCategory(
+  name: string | undefined,
+  deps: StreamProfileToolDeps,
+): Promise<StreamCategory | ReturnType<typeof validationError>> {
+  if (name === undefined) {
+    return { id: manualCategoryId(''), name: '', manual: true };
+  }
+
+  const resolved = await deps.resolveCategory(name);
+  return resolved ?? validationError(`No category found matching "${name}"`);
 }
 
 /** Applies title/category/tags directly, with no saved profile behind them. */
@@ -155,11 +169,16 @@ async function updateDirect(
     return fields;
   }
 
+  const category = await resolveDirectUpdateCategory(fields.category, deps);
+  if ('ok' in category) {
+    return category;
+  }
+
   const now = new Date();
   const ephemeralProfile: StreamProfile = {
     id: 'webmcp-direct-update',
     name: 'Direct update',
-    category: directUpdateCategory(fields.category),
+    category,
     title: fields.title,
     tags: fields.tags,
     createdAt: now,

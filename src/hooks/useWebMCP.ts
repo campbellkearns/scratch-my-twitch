@@ -11,8 +11,9 @@
  */
 
 import { useEffect, useMemo, useRef } from 'react';
-import type { StreamProfile } from '@/types/Profile';
+import type { StreamCategory, StreamProfile } from '@/types/Profile';
 import { getTwitchAPI } from '@/lib/api/twitchAPI';
+import { getCategoryRepository } from '@/repositories/CategoryRepository';
 import {
   registerModelContextTool,
   unregisterModelContextTool,
@@ -20,6 +21,12 @@ import {
 } from '@/lib/webmcp/modelContext';
 import type { StreamProfileToolDeps } from '@/lib/webmcp/streamProfileTools';
 import { createStreamProfileTools } from '@/lib/webmcp/streamProfileTools';
+
+/** Default `resolveCategory`: the first `CategoryRepository.search` hit, or `null`. */
+async function resolveCategoryFromRepository(name: string): Promise<StreamCategory | null> {
+  const result = await getCategoryRepository().search(name, 1);
+  return result.success && result.data && result.data.length > 0 ? result.data[0] : null;
+}
 
 /**
  * Registers `tools` with the browser's model context while `enabled` is true.
@@ -50,6 +57,8 @@ export interface UseWebMCPOptions {
   profiles: readonly StreamProfile[];
   /** Override the Twitch call in tests; defaults to the app's existing `applyProfile` path. */
   applyProfile?: StreamProfileToolDeps['applyProfile'];
+  /** Override category resolution in tests; defaults to `CategoryRepository.search`. */
+  resolveCategory?: StreamProfileToolDeps['resolveCategory'];
 }
 
 /**
@@ -59,7 +68,7 @@ export interface UseWebMCPOptions {
  * the user creates or edits profiles — re-registering on every profile change would churn the
  * browser's registry and risk the agent seeing a momentarily empty tool list.
  */
-export function useWebMCP({ isAuthenticated, profiles, applyProfile }: UseWebMCPOptions): void {
+export function useWebMCP({ isAuthenticated, profiles, applyProfile, resolveCategory }: UseWebMCPOptions): void {
   const profilesRef = useRef<readonly StreamProfile[]>(profiles);
   profilesRef.current = profiles;
 
@@ -68,8 +77,9 @@ export function useWebMCP({ isAuthenticated, profiles, applyProfile }: UseWebMCP
       createStreamProfileTools({
         getProfiles: () => profilesRef.current,
         applyProfile: applyProfile ?? (profile => getTwitchAPI().applyProfile(profile)),
+        resolveCategory: resolveCategory ?? resolveCategoryFromRepository,
       }),
-    [applyProfile],
+    [applyProfile, resolveCategory],
   );
 
   useModelContextTools(tools, isAuthenticated);
