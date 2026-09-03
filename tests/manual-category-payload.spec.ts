@@ -121,8 +121,19 @@ test.describe('Manual category payload and styled validation', () => {
     const channelUpdateBodies: Array<Record<string, unknown>> = [];
 
     // Intercept the channel-update call — this is the wire the constraint
-    // protects: no synthetic id may ride it as game_id.
+    // protects: no synthetic id may ride it as game_id. The C2 status card
+    // also GETs this endpoint on mount; that read carries no body, so only
+    // writes are recorded as wire truth and the GET gets a valid empty
+    // channels response.
     await page.route('**/api.twitch.tv/helix/channels**', async (route) => {
+      if (route.request().method() !== 'PATCH') {
+        await route.fulfill({
+          status: 200,
+          contentType: 'application/json',
+          body: JSON.stringify({ data: [] }),
+        });
+        return;
+      }
       const body = route.request().postDataJSON() as Record<string, unknown>;
       channelUpdateBodies.push(body);
       await route.fulfill({ status: 200, contentType: 'application/json', body: '{}' });

@@ -12,6 +12,9 @@ export {
   useRepositoryHealth
 } from './useProfiles';
 
+// Channel Status Hooks
+export { useChannelStatus, type ChannelStatusState } from './useChannelStatus';
+
 // Category Management Hooks
 export { 
   useCategories, 
