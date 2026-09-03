@@ -85,7 +85,7 @@ export const STORAGE_KEYS = {
   /** IndexedDB database name */
   DB_NAME: 'StreamChameleonDB',
   /** Database version */
-  DB_VERSION: 1,
+  DB_VERSION: 2,
   /** Profiles object store */
   PROFILES_STORE: 'profiles',
   /** Categories cache store */
@@ -93,7 +93,9 @@ export const STORAGE_KEYS = {
   /** Auth tokens store */
   AUTH_STORE: 'auth',
   /** User preferences store */
-  PREFERENCES_STORE: 'preferences'
+  PREFERENCES_STORE: 'preferences',
+  /** Apply history store (added in DB v2) */
+  APPLY_HISTORY_STORE: 'applyHistory'
 } as const;
 
 /**
