@@ -19,7 +19,7 @@ import type {
   TwitchRateLimit,
   CachedCategory
 } from '@/types/TwitchAPI';
-import type { StreamProfile } from '@/types/Profile';
+import type { StreamProfile, SentChannelPayload } from '@/types/Profile';
 import { TWITCH_ENDPOINTS, TWITCH_CONFIG, API_CONFIG, FEATURE_FLAGS } from '@/types/constants';
 
 /**
@@ -46,6 +46,23 @@ export interface StreamUpdateRequest {
 }
 
 /**
+ * Build the exact payload an apply sends to Twitch: processed title, tags
+ * capped at 10, and game_id omitted for manual categories. The PATCH body
+ * and apply-history records both derive from this function, so stored wire
+ * truth has exactly one construction site and can never drift from the wire.
+ */
+export const buildSentPayload = (profile: StreamProfile): SentChannelPayload => {
+  const processedTitle = processTitle(profile.title);
+
+  return {
+    title: processedTitle.processed,
+    tags: profile.tags.slice(0, 10), // Ensure max 10 tags
+    gameId: isManualCategory(profile.category) ? null : profile.category.id,
+    categoryName: profile.category.name
+  };
+};
+
+/**
  * Twitch API Client for stream management operations
  */
 export class TwitchAPIClient {
@@ -68,7 +85,7 @@ export class TwitchAPIClient {
   /**
    * Apply a stream profile to update channel information
    */
-  async applyProfile(profile: StreamProfile): Promise<APIResult<boolean>> {
+  async applyProfile(profile: StreamProfile): Promise<APIResult<SentChannelPayload>> {
     try {
       // Get authenticated user and token
       const [user, token] = await Promise.all([
@@ -86,18 +103,19 @@ export class TwitchAPIClient {
         };
       }
 
-      // Process dynamic title templates
-      const processedTitle = processTitle(profile.title);
+      // Single source of truth for what goes on the wire — the returned
+      // payload and the PATCH body are the same object's fields.
+      const sentPayload = buildSentPayload(profile);
 
-      // Prepare update request. Manual categories carry a synthetic id —
-      // omit game_id so it never reaches Twitch (which rejects non-numeric ids).
+      // Manual categories carry a synthetic id — omit game_id so it never
+      // reaches Twitch (which rejects non-numeric ids).
       const updateRequest: UpdateChannelRequest = {
-        title: processedTitle.processed,
-        tags: profile.tags.slice(0, 10) // Ensure max 10 tags
+        title: sentPayload.title,
+        tags: sentPayload.tags
       };
 
-      if (!isManualCategory(profile.category)) {
-        updateRequest.game_id = profile.category.id;
+      if (sentPayload.gameId !== null) {
+        updateRequest.game_id = sentPayload.gameId;
       }
 
       this.log('Applying profile to Twitch', { 
@@ -140,7 +158,7 @@ export class TwitchAPIClient {
 
       return {
         success: true,
-        data: true,
+        data: sentPayload,
         rateLimit
       };
 
@@ -514,7 +532,7 @@ export const getTwitchAPI = (): TwitchAPIClient => TwitchAPIClient.getInstance()
 /**
  * Apply a stream profile
  */
-export const applyStreamProfile = (profile: StreamProfile): Promise<APIResult<boolean>> => 
+export const applyStreamProfile = (profile: StreamProfile): Promise<APIResult<SentChannelPayload>> => 
   getTwitchAPI().applyProfile(profile);
 
 /**
