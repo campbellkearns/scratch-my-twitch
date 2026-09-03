@@ -205,9 +205,16 @@ export const getDB = async (): Promise<IndexedDBWrapper> => {
     return instance;
   })();
 
-  const instance = await initPromise;
-  initPromise = null;
-  return instance;
+  try {
+    const instance = await initPromise;
+    return instance;
+  } finally {
+    // Always clear the in-flight promise once it settles. On success this
+    // preserves the old behavior (dbInstance is set anyway); on a failed open
+    // it prevents the rejection from being cached forever, so the next
+    // getDB() call re-attempts initialization instead of rejecting too.
+    initPromise = null;
+  }
 };
 
 /**
