@@ -150,7 +150,7 @@ test.describe('Apply history recording', () => {
     });
 
     await page.goto('/');
-    await expect(page.locator(`text=${SEEDED_PROFILE.name}`)).toBeVisible({ timeout: 15000 });
+    await expect(page.getByRole('heading', { name: SEEDED_PROFILE.name })).toBeVisible({ timeout: 15000 });
 
     page.on('dialog', (dialog) => dialog.accept());
     await page.locator('article.scandi-card').first().getByRole('button', { name: /apply profile/i }).click();
@@ -247,7 +247,7 @@ test.describe('Apply history recording', () => {
     });
 
     await page.goto('/');
-    await expect(page.locator(`text=${SEEDED_PROFILE.name}`)).toBeVisible({ timeout: 15000 });
+    await expect(page.getByRole('heading', { name: SEEDED_PROFILE.name })).toBeVisible({ timeout: 15000 });
 
     await page.locator('article.scandi-card').first().getByRole('button', { name: /apply profile/i }).click();
 

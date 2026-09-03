@@ -95,24 +95,30 @@ async function probeDatabase(page: Page): Promise<DbProbe> {
       const open = indexedDB.open('StreamChameleonDB');
       open.onerror = () => reject(open.error ?? new Error('probe open failed'));
       open.onsuccess = () => {
-        const db = open.result;
-        const stores = Array.from(db.objectStoreNames) as string[];
-        const tx = db.transaction(['profiles', 'applyHistory'], 'readonly');
-        const profileCount = tx.objectStore('profiles').count();
-        const historyStore = tx.objectStore('applyHistory');
-        const historyCount = historyStore.count();
-        const historyIndexes = Array.from(historyStore.indexNames) as string[];
-        tx.oncomplete = () => {
-          db.close();
-          resolve({
-            version: db.version,
-            stores,
-            profileCount: profileCount.result,
-            historyCount: historyCount.result,
-            historyIndexes,
-          });
-        };
-        tx.onerror = () => reject(tx.error ?? new Error('probe read failed'));
+        // A synchronous throw here (e.g. a store not existing yet) would leave the
+        // promise unsettled and surface as a 30s timeout — reject fast instead.
+        try {
+          const db = open.result;
+          const stores = Array.from(db.objectStoreNames) as string[];
+          const tx = db.transaction(['profiles', 'applyHistory'], 'readonly');
+          const profileCount = tx.objectStore('profiles').count();
+          const historyStore = tx.objectStore('applyHistory');
+          const historyCount = historyStore.count();
+          const historyIndexes = Array.from(historyStore.indexNames) as string[];
+          tx.oncomplete = () => {
+            db.close();
+            resolve({
+              version: db.version,
+              stores,
+              profileCount: profileCount.result,
+              historyCount: historyCount.result,
+              historyIndexes,
+            });
+          };
+          tx.onerror = () => reject(tx.error ?? new Error('probe read failed'));
+        } catch (error) {
+          reject(error instanceof Error ? error : new Error('probe read setup failed'));
+        }
       };
     });
   });
@@ -125,8 +131,8 @@ test.describe('DB v2 additive migration', () => {
     // Booting the app opens the seeded v1 database under v2. If the upgrade
     // rejected, wiped, or dropped stores, every assertion below fails.
     await page.goto('/');
-    await expect(page.locator('text=Morning Pages')).toBeVisible({ timeout: 15000 });
-    await expect(page.locator('text=Evening Coding')).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Morning Pages' })).toBeVisible({ timeout: 15000 });
+    await expect(page.getByRole('heading', { name: 'Evening Coding' })).toBeVisible();
 
     const probe = await probeDatabase(page);
 
@@ -159,6 +165,12 @@ test.describe('DB v2 additive migration', () => {
 
   test('fresh install creates every store including applyHistory at v2', async ({ page }) => {
     await page.goto('/');
+    // The empty state renders only after the profile load resolves, which means the
+    // app's own v2 open has completed — probing earlier races it on slow engines
+    // (Mobile Safari) and can create a v1 database underneath the probe.
+    await expect(page.getByRole('heading', { name: 'No profiles yet' })).toBeVisible({
+      timeout: 15000,
+    });
 
     const probe = await probeDatabase(page);
 
