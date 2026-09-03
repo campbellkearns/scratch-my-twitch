@@ -15,8 +15,9 @@ test.describe('Profile Management', () => {
   });
 
   test('should create a new profile', async ({ page }) => {
-    // Click "New Profile" button
-    await page.click('a:has-text("New Profile")');
+    // Click "New Profile" — scope to a visible link: the nav bar's desktop-only
+    // New Profile link also matches but is hidden on mobile viewports
+    await page.locator('a[href="/profile/new"]').filter({ visible: true }).first().click();
 
     // Wait for create form
     await expect(page).toHaveURL(/\/profile\/new/);
@@ -43,14 +44,16 @@ test.describe('Profile Management', () => {
     // Should redirect to dashboard
     await expect(page).toHaveURL('/', { timeout: 5000 });
 
-    // Profile should appear in the list
-    await expect(page.locator('text=Test Profile')).toBeVisible();
+    // Profile should appear in the list — match the card's name heading only,
+    // since 'Test Profile' is also a substring of the description text
+    await expect(page.getByRole('heading', { name: 'Test Profile' })).toBeVisible();
   });
 
   test('should list existing profiles', async ({ page }) => {
     // Check if we have profiles or empty state
     const hasProfiles = await page.locator('article.scandi-card').count() > 0;
-    const hasEmptyState = await page.locator('text=No profiles yet').isVisible();
+    // Scope to the empty-state heading: the same text also appears in the header subtitle
+    const hasEmptyState = await page.getByRole('heading', { name: 'No profiles yet' }).isVisible();
 
     // Either we should see profiles or the empty state
     expect(hasProfiles || hasEmptyState).toBeTruthy();
@@ -140,14 +143,17 @@ test.describe('Profile Management', () => {
 
     // Profile count should decrease or show empty state
     const finalCount = await page.locator('article.scandi-card').count();
-    const showsEmptyState = await page.locator('text=No profiles yet').isVisible();
+    // Scope to the empty-state heading: the same text also appears in the header subtitle
+    const showsEmptyState = await page.getByRole('heading', { name: 'No profiles yet' }).isVisible();
 
     expect(finalCount < initialCount || showsEmptyState).toBeTruthy();
   });
 
   test('should show profile count', async ({ page }) => {
     // The dashboard should show profile count
-    const countText = page.locator('text=/\\d+ profile/i, text=No profiles yet');
-    await expect(countText).toBeVisible();
+    // The header subtitle carries the profile count ("N profile(s) ready to use"),
+    // or the empty-state message when there are none — assert its actual rendered text
+    const countText = page.locator('p.text-lg');
+    await expect(countText).toHaveText(/\d+ profiles? ready to use|^No profiles yet/);
   });
 });
