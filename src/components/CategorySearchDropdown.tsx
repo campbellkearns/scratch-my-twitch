@@ -33,6 +33,15 @@ export function CategorySearchDropdown({
   const dropdownRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
+  // The blur fallback reads the latest selection: its 200ms timer is
+  // scheduled on blur but fires after the option click that caused it, so a
+  // captured `value` would be stale (null) and clobber the just-made
+  // selection with a synthetic manual entry.
+  const valueRef = useRef(value);
+  useEffect(() => {
+    valueRef.current = value;
+  }, [value]);
+
   const {
     query,
     setQuery,
@@ -93,7 +102,7 @@ export function CategorySearchDropdown({
     setTimeout(() => {
       // If user typed something but didn't select from dropdown,
       // treat it as manual entry
-      if (inputValue && !value) {
+      if (inputValue && !valueRef.current) {
         onChange({
           id: inputValue.toLowerCase().replace(/[^a-z0-9]/g, ''),
           name: inputValue,
