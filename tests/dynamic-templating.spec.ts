@@ -98,8 +98,8 @@ test.describe('Dynamic Title Templating', () => {
     const titleElement = profileCard.locator('[title*="Daily {DAY} Stream"]');
 
     // The title attribute should contain the original template
-    const hasTooltip = await titleElement.count() > 0;
-    expect(hasTooltip).toBeTruthy();
+    // Wait for the async render instead of racing it with a bare count()
+    await expect(titleElement).toBeVisible();
   });
 
   test('should process templates when profile is edited', async ({ page }) => {
