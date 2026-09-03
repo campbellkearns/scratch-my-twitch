@@ -39,16 +39,19 @@ export const useCategories = () => {
     try {
       const result = await categoryRepository.getAll();
       
-      if (result.success && result.data) {
+      if (result.success && result.data && result.data.length > 0) {
         setCategories(result.data);
         setLoadingState({ isLoading: false, error: null, isSearching: false });
       } else {
-        // If no cached categories, load defaults
+        // Empty cache is a miss on a fresh install: seed the defaults so
+        // they persist, then show them. A storage error also lands here —
+        // show the defaults and surface the failure.
         const defaultCategories = categoryRepository.getDefaultCategories();
+        const seeded = await categoryRepository.seedDefaults(defaultCategories);
         setCategories(defaultCategories);
         setLoadingState({
           isLoading: false,
-          error: result.error?.message || null,
+          error: (!seeded.success && seeded.error?.message) || result.error?.message || null,
           isSearching: false
         });
       }
