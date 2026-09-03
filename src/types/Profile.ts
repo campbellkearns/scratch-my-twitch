@@ -15,6 +15,8 @@ export interface StreamCategory {
   name: string;
   /** Optional box art URL for UI display */
   boxArtUrl?: string;
+  /** True when the entry was typed manually and has no real Twitch id */
+  manual?: boolean;
 }
 
 /**

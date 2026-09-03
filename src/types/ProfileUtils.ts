@@ -11,9 +11,43 @@ import {
   ProfileValidationResult, 
   ProfileValidationError,
   ProcessedTitle,
+  StreamCategory,
   PROFILE_VALIDATION_ERRORS,
   TITLE_TEMPLATES
 } from '../types/Profile';
+
+/**
+ * Manual categories
+ *
+ * Categories typed by hand in the dropdown have no real Twitch id. They are
+ * marked at creation (manual flag + 'manual:' id prefix) so the Twitch API
+ * layer can keep synthetic ids off the wire — Twitch rejects non-numeric
+ * game_id values.
+ */
+
+/** Prefix identifying manually-entered category ids */
+export const MANUAL_CATEGORY_ID_PREFIX = 'manual:';
+
+/**
+ * Build the synthetic id for a manually-entered category
+ */
+export function manualCategoryId(name: string): string {
+  return `${MANUAL_CATEGORY_ID_PREFIX}${name.toLowerCase().replace(/[^a-z0-9]/g, '')}`;
+}
+
+/**
+ * Check whether a category is a manual entry with no real Twitch id.
+ *
+ * Beyond the explicit marker, any non-numeric id counts as manual so legacy
+ * synthetic entries (created before marking existed) can never reach Twitch.
+ */
+export function isManualCategory(category: StreamCategory): boolean {
+  return (
+    category.manual === true ||
+    category.id.startsWith(MANUAL_CATEGORY_ID_PREFIX) ||
+    !/^\d+$/.test(category.id)
+  );
+}
 
 /**
  * Generate a UUID v4

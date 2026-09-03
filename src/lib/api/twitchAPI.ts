@@ -7,7 +7,7 @@
 
 import { getTwitchAuth } from '@/lib/auth/twitchAuth';
 import { getCategoryRepository } from '@/repositories/CategoryRepository';
-import { processTitle } from '@/types/ProfileUtils';
+import { isManualCategory, processTitle } from '@/types/ProfileUtils';
 import type { 
   TwitchAPIHealthCheck,
   TwitchGameResponse,
@@ -89,12 +89,16 @@ export class TwitchAPIClient {
       // Process dynamic title templates
       const processedTitle = processTitle(profile.title);
 
-      // Prepare update request
+      // Prepare update request. Manual categories carry a synthetic id —
+      // omit game_id so it never reaches Twitch (which rejects non-numeric ids).
       const updateRequest: UpdateChannelRequest = {
-        game_id: profile.category.id,
         title: processedTitle.processed,
         tags: profile.tags.slice(0, 10) // Ensure max 10 tags
       };
+
+      if (!isManualCategory(profile.category)) {
+        updateRequest.game_id = profile.category.id;
+      }
 
       this.log('Applying profile to Twitch', { 
         profileName: profile.name,
