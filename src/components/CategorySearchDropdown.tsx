@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect } from 'react';
 import { useCategorySearch, useCategories } from '@/hooks/useCategories';
 import type { StreamCategory } from '@/types/Profile';
+import { manualCategoryId } from '@/types/ProfileUtils';
 
 interface CategorySearchDropdownProps {
   value: StreamCategory | null;
@@ -104,8 +105,9 @@ export function CategorySearchDropdown({
       // treat it as manual entry
       if (inputValue && !valueRef.current) {
         onChange({
-          id: inputValue.toLowerCase().replace(/[^a-z0-9]/g, ''),
+          id: manualCategoryId(inputValue),
           name: inputValue,
+          manual: true,
         });
       }
     }, 200);
@@ -140,7 +142,7 @@ export function CategorySearchDropdown({
           className={`scandi-input w-full pr-20 ${error ? 'border-red-300 bg-red-50' : ''}`}
           placeholder="Search for a category..."
           disabled={disabled}
-          required={required}
+          aria-required={required}
           autoComplete="off"
           aria-autocomplete="list"
           aria-controls="category-dropdown"
