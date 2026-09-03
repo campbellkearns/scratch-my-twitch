@@ -353,45 +353,6 @@ export const useProfile = (id: string | null) => {
 };
 
 /**
- * Hook for profile validation
- */
-export const useProfileValidation = () => {
-  const { validateProfile } = require('@/types/ProfileUtils');
-  
-  const validateInput = useCallback((input: CreateProfileInput) => {
-    return validateProfile(input);
-  }, []);
-
-  return {
-    validateInput
-  };
-};
-
-/**
- * Hook for profile statistics and analytics
- */
-export const useProfileStats = () => {
-  const [stats, setStats] = useState({
-    total: 0,
-    byCategory: {} as Record<string, number>,
-    withTemplates: 0,
-    mostUsedTags: [] as Array<{ tag: string; count: number }>,
-    recentlyUpdated: [] as StreamProfile[]
-  });
-
-  const { profiles, isLoading } = useProfiles();
-
-  useEffect(() => {
-    if (!isLoading && profiles.length > 0) {
-      const { getProfileStats } = require('@/types/ProfileUtils');
-      setStats(getProfileStats(profiles));
-    }
-  }, [profiles, isLoading]);
-
-  return stats;
-};
-
-/**
  * Hook for checking repository health
  */
 export const useRepositoryHealth = () => {
