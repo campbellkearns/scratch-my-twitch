@@ -337,7 +337,7 @@ export default function EditProfile(): JSX.Element {
             </div>
           </div>
 
-          <div className="flex items-center justify-between">
+          <div className="flex flex-wrap items-center justify-between gap-3">
             <button
               type="button"
               onClick={handleDelete}
@@ -357,7 +357,7 @@ export default function EditProfile(): JSX.Element {
               )}
             </button>
             
-            <div className="flex items-center space-x-4">
+            <div className="flex flex-wrap items-center gap-3">
               <button
                 type="button"
                 onClick={() => navigate('/')}

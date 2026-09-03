@@ -253,7 +253,7 @@ export default function CreateProfile(): JSX.Element {
             </div>
           </div>
 
-          <div className="flex items-center justify-between">
+          <div className="flex flex-wrap items-center justify-between gap-3">
             <button
               type="button"
               onClick={() => navigate('/')}
