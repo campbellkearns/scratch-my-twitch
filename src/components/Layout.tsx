@@ -1,6 +1,8 @@
 import { Outlet, Link, useLocation } from 'react-router-dom'
 import { useState } from 'react'
 import { useAuthState } from '@/hooks/useAuth'
+import { useProfiles } from '@/hooks/useProfiles'
+import { useWebMCP } from '@/hooks/useWebMCP'
 import { getTwitchAuth } from '@/lib/auth/twitchAuth'
 import AgentControlIndicator from '@/components/AgentControlIndicator'
 
@@ -8,6 +10,12 @@ export default function Layout(): JSX.Element {
   const location = useLocation()
   const [isMenuOpen, setIsMenuOpen] = useState(false)
   const { isAuthenticated, user, isLoading } = useAuthState()
+  const { profiles } = useProfiles()
+
+  // Registers the three WebMCP tools while signed in (spec deliverable 2). Layout wraps every
+  // route and persists across navigation, so registration survives page-to-page transitions
+  // instead of churning the browser's tool registry on each route change.
+  useWebMCP({ isAuthenticated, profiles })
   
   const isActiveRoute = (path: string): boolean => {
     return location.pathname === path
