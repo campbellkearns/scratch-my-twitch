@@ -9,8 +9,6 @@
 export { 
   useProfiles, 
   useProfile, 
-  useProfileValidation, 
-  useProfileStats,
   useRepositoryHealth
 } from './useProfiles';
 
@@ -33,8 +31,6 @@ export const hooks = {
   // Profile hooks
   useProfiles,
   useProfile,
-  useProfileValidation,
-  useProfileStats,
   useRepositoryHealth,
   
   // Category hooks

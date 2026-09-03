@@ -34,3 +34,7 @@ playwright/.cache/
 *.njsproj
 *.sln
 *.sw?
+
+# Bun lockfile (npm is the tracked and deployed package manager)
+bun.lock
+
