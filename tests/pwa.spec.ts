@@ -196,13 +196,9 @@ test.describe('Service Worker', () => {
       return false;
     });
 
-    // Note: This test will fail until EXE-24 is fixed
-    // (Service Worker registration is missing)
-    // expect(swRegistered).toBeTruthy();
-
-    // For now, just check if service worker API is available
-    const swSupported = await page.evaluate(() => 'serviceWorker' in navigator);
-    expect(swSupported).toBeTruthy();
+    // Runs only on the pwa-preview project, where the production build
+    // registers the service worker — dev serves none.
+    expect(swRegistered).toBeTruthy();
   });
 
   test('should have service worker API available', async ({ page }) => {
