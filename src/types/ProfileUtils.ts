@@ -12,6 +12,7 @@ import {
   ProfileValidationError,
   ProcessedTitle,
   StreamCategory,
+  ApplyRecord,
   PROFILE_VALIDATION_ERRORS,
   TITLE_TEMPLATES
 } from '../types/Profile';
@@ -75,6 +76,21 @@ export function createProfile(input: CreateProfileInput): StreamProfile {
     tags: input.tags.map(tag => tag.trim()).filter(tag => tag.length > 0),
     createdAt: now,
     updatedAt: now
+  };
+}
+
+/**
+ * Create an apply-history record with generated ID and timestamp.
+ * Mirrors createProfile: the caller supplies the domain fields, this owns
+ * the generated ones (UUID v4 id, epoch-ms appliedAt).
+ */
+export function createApplyRecord(
+  input: Omit<ApplyRecord, 'id' | 'appliedAt'>
+): ApplyRecord {
+  return {
+    ...input,
+    id: generateUUID(),
+    appliedAt: Date.now()
   };
 }
 

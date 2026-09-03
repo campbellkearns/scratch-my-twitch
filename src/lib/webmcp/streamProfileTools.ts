@@ -10,7 +10,7 @@
  * browser registered once still sees profiles created or edited later in the session.
  */
 
-import type { StreamProfile, StreamCategory } from '@/types/Profile';
+import type { StreamProfile, StreamCategory, SentChannelPayload } from '@/types/Profile';
 import { processTitle, manualCategoryId } from '@/types/ProfileUtils';
 import { VALIDATION_LIMITS } from '@/types/constants';
 import type { APIResult } from '@/lib/api/twitchAPI';
@@ -31,9 +31,9 @@ const MAX_TAGS = 10;
 export interface StreamProfileToolDeps {
   /** Current profiles, read at call time so a long-lived registration never goes stale. */
   getProfiles: () => readonly StreamProfile[];
-  /** The existing profile-application path (`twitchAPI.applyProfile`). */
-  applyProfile: (profile: StreamProfile) => Promise<APIResult<boolean>>;
-  /**
+  /** The existing profile-application path (`twitchAPI.applyProfile`), which resolves with the sent payload. */
+  applyProfile: (profile: StreamProfile) => Promise<APIResult<SentChannelPayload>>;
+/**
    * Resolves a category name to its cached/live Twitch entry (`CategoryRepository.search`),
    * or `null` when nothing matches. Injected so tests don't need IndexedDB or the Twitch API.
    */

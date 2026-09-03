@@ -1,6 +1,6 @@
 import { beforeEach, afterEach, describe, expect, it, vi } from 'vitest';
 import type { APIResult } from '@/lib/api/twitchAPI';
-import type { StreamCategory, StreamProfile } from '@/types/Profile';
+import type { StreamCategory, StreamProfile, SentChannelPayload } from '@/types/Profile';
 import { findProfile } from './profileMatch';
 import { createStreamProfileTools, type StreamProfileToolDeps } from './streamProfileTools';
 
@@ -18,8 +18,11 @@ function makeProfile(overrides: Partial<StreamProfile> = {}): StreamProfile {
   };
 }
 
-function success(): APIResult<boolean> {
-  return { success: true, data: true };
+function success(): APIResult<SentChannelPayload> {
+  return {
+    success: true,
+    data: { title: 'stubbed payload', tags: [], gameId: null, categoryName: 'Stub Category' },
+  };
 }
 
 /** The template-processed title the success payload is contractually expected to carry. */
@@ -95,7 +98,7 @@ describe('stream profile tools', () => {
   beforeEach(() => {
     vi.useFakeTimers();
     profiles = [makeProfile({ id: '1' }), makeProfile({ id: '2', name: 'Coding Stream', tags: ['live'] })];
-    applyProfile = vi.fn<(profile: StreamProfile) => Promise<APIResult<boolean>>>(async () => success());
+    applyProfile = vi.fn<(profile: StreamProfile) => Promise<APIResult<SentChannelPayload>>>(async () => success());
     resolveCategory = vi.fn<(name: string) => Promise<StreamCategory | null>>(async name =>
       name === RESOLVABLE_CATEGORY.name ? RESOLVABLE_CATEGORY : null,
     );

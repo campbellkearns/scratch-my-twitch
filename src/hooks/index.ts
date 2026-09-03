@@ -22,6 +22,11 @@ export {
   useCategoryValidation 
 } from './useCategories';
 
+// Apply History Hooks
+export {
+  useApplyHistory
+} from './useApplyHistory';
+
 // Authentication Hooks
 export {
   useAuth,
@@ -40,6 +45,9 @@ export const hooks = {
   useCategories,
   useCategorySearch,
   useCategoryValidation,
+  
+  // Apply history hooks
+  useApplyHistory,
   
   // Auth hooks
   useAuth,
