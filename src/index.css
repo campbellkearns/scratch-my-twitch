@@ -115,9 +115,14 @@
     box-shadow: var(--shadow-scandi);
   }
   
-  .scandi-card:hover {
-    transform: translateY(-2px);
-    box-shadow: var(--shadow);
+  /* Hover lift only for hover-capable pointers — touch (Mobile Chrome/Safari)
+     applies :hover on first tap (sticky hover), and the translateY shift moves
+     the card mid-tap so tap targets inside the card get intercepted. */
+  @media (hover: hover) {
+    .scandi-card:hover {
+      transform: translateY(-2px);
+      box-shadow: var(--shadow);
+    }
   }
   
   /* Scandinavian Input Component */
