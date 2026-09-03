@@ -52,9 +52,13 @@ function ChannelData({ channel, fetchedAt }: { channel: TwitchChannelResponse; f
   );
 }
 
-export function ChannelStatusCard(): JSX.Element {
+export function ChannelStatusCard({ refreshNonce = 0 }: { refreshNonce?: number }): JSX.Element {
   const [retryNonce, setRetryNonce] = useState(0);
-  const status = useChannelStatus(retryNonce);
+  // refreshNonce: bumped by the Dashboard after a successful replay
+  // (Apply-again / Revert changed the channel) so the card refetches
+  // immediately instead of waiting for the next focus — forced, so it
+  // bypasses the 30s throttle.
+  const status = useChannelStatus(retryNonce + refreshNonce);
 
   if (status.phase === 'loading') {
     // Card skeleton, no numbers (spec state table).
