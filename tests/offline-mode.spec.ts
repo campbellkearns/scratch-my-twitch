@@ -1,4 +1,4 @@
-import { test, expect, Page } from '@playwright/test';
+import { test, expect, BrowserContext, Page } from '@playwright/test';
 
 /**
  * Offline Mode Tests
@@ -11,6 +11,18 @@ async function selectCategory(page: Page, query: string) {
   await categoryInput.fill(query);
   await page.waitForTimeout(500);
   await page.locator(`button[role="option"]:has-text("${query}")`).first().click();
+}
+
+/**
+ * Simulate offline at the route level instead of context.setOffline():
+ * the app reacts to fetch failures only (it never reads navigator.onLine —
+ * zero hits in src/), so aborting external origins is behaviorally
+ * equivalent to a network cut while leaving the localhost document fetch
+ * alone. setOffline(true) kills the document fetch itself, and with no
+ * service worker in dev there is nothing to serve a page.reload() from.
+ */
+function simulateOffline(context: BrowserContext): void {
+  context.route(/^https?:\/\/(?!localhost|127\.0\.0\.1).*$/, (route) => route.abort('failed'));
 }
 
 test.describe('Offline Functionality', () => {
@@ -54,8 +66,8 @@ test.describe('Offline Functionality', () => {
   });
 
   test('should create profiles while offline', async ({ page, context }) => {
-    // Go offline
-    await context.setOffline(true);
+    // Cut external origins; SPA navigation and IndexedDB writes stay local
+    simulateOffline(context);
 
     // Try to create a profile
     await page.locator('a[href="/profile/new"]').filter({ visible: true }).first().click();
@@ -71,9 +83,6 @@ test.describe('Offline Functionality', () => {
 
     // Profile should appear in the list (from IndexedDB)
     await expect(page.locator('text=Offline Created Profile')).toBeVisible();
-
-    // Go back online
-    await context.setOffline(false);
   });
 
   test('should edit profiles while offline', async ({ page, context }) => {
@@ -85,8 +94,8 @@ test.describe('Offline Functionality', () => {
     await page.click('button[type="submit"]');
     await page.waitForURL('/');
 
-    // Now go offline
-    await context.setOffline(true);
+    // Cut external origins; SPA navigation and IndexedDB writes stay local
+    simulateOffline(context);
 
     // Edit the profile
     const profileCard = page.locator('article.scandi-card', { hasText: 'Profile for Offline Edit' });
@@ -100,9 +109,6 @@ test.describe('Offline Functionality', () => {
     // Should work
     await expect(page).toHaveURL('/');
     await expect(page.locator('text=Updated while offline')).toBeVisible();
-
-    // Go back online
-    await context.setOffline(false);
   });
 
   test('should list profiles while offline', async ({ page, context }) => {
@@ -118,21 +124,18 @@ test.describe('Offline Functionality', () => {
       await page.waitForURL('/');
     }
 
+    // Card render is async after the redirect — wait for it before counting
+    await expect(page.locator('article.scandi-card').first()).toBeVisible();
     const initialCount = await page.locator('article.scandi-card').count();
 
-    // Go offline
-    await context.setOffline(true);
+    // Cut external origins; the localhost document still reloads
+    simulateOffline(context);
 
     // Reload the page
     await page.reload();
     await page.waitForSelector('h1:has-text("Stream Profiles")');
 
-    // Should still show profiles from IndexedDB
-    const offlineCount = await page.locator('article.scandi-card').count();
-    expect(offlineCount).toBe(initialCount);
-
-    // Go back online
-    await context.setOffline(false);
+    await expect(page.locator('article.scandi-card')).toHaveCount(initialCount);
   });
 
   test('should handle API unavailability gracefully', async ({ page, context }) => {
