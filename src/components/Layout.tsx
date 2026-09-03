@@ -2,6 +2,7 @@ import { Outlet, Link, useLocation } from 'react-router-dom'
 import { useState } from 'react'
 import { useAuthState } from '@/hooks/useAuth'
 import { getTwitchAuth } from '@/lib/auth/twitchAuth'
+import AgentControlIndicator from '@/components/AgentControlIndicator'
 
 export default function Layout(): JSX.Element {
   const location = useLocation()
@@ -69,6 +70,7 @@ export default function Layout(): JSX.Element {
               {/* Authentication Status */}
               {!isLoading && (
                 <div className="flex items-center space-x-3 pl-4 border-l border-neutral-200">
+                  <AgentControlIndicator />
                   {isAuthenticated && user ? (
                     <div className="flex items-center space-x-3">
                       <div className="flex items-center space-x-2">
@@ -139,6 +141,9 @@ export default function Layout(): JSX.Element {
                 {/* Mobile Authentication Status */}
                 {!isLoading && (
                   <div className="pt-4 mt-4 border-t border-neutral-200">
+                    <div className="px-4 pb-3">
+                      <AgentControlIndicator />
+                    </div>
                     {isAuthenticated && user ? (
                       <div className="space-y-3">
                         <div className="flex items-center space-x-3 px-4 py-2">
