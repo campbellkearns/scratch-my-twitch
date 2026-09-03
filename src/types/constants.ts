@@ -68,7 +68,14 @@ export const API_CONFIG = {
   /** Delay between retries in milliseconds */
   RETRY_DELAY: 1000,
   /** Rate limit buffer (requests per minute) */
-  RATE_LIMIT_BUFFER: 50
+  RATE_LIMIT_BUFFER: 50,
+  /**
+   * Minimum interval (ms) between automatic channel-status refreshes
+   * (mount / window focus / visibilitychange) — the C2 spec's 30s throttle
+   * floor. RATE_LIMIT_BUFFER is a per-minute request quota, not an interval,
+   * so the spec's explicit 30s minimum applies.
+   */
+  CHANNEL_STATUS_MIN_INTERVAL: 30_000
 } as const;
 
 /**

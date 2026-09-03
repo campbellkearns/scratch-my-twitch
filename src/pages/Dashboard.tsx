@@ -1,5 +1,6 @@
 import { Link } from 'react-router-dom'
 import { useProfiles } from '@/hooks/useProfiles'
+import { ChannelStatusCard } from '@/components/ChannelStatusCard'
 import { useAPIHealth } from '@/hooks/useAPIHealth'
 import { processTitle } from '@/types/ProfileUtils'
 import { APIStatusIndicator } from '@/components/APIStatus'
@@ -137,6 +138,9 @@ export default function Dashboard(): JSX.Element {
           <span>New Profile</span>
         </Link>
       </div>
+
+      {/* C2: live channel-status card — what is actually set right now */}
+      <ChannelStatusCard />
 
       {isEmpty ? (
         <div className="text-center py-16">
