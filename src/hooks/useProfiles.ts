@@ -6,10 +6,44 @@
  */
 
 import { useState, useEffect, useCallback, useMemo } from 'react';
-import type { StreamProfile, CreateProfileInput, UpdateProfileInput } from '@/types/Profile';
+import type { StreamProfile, CreateProfileInput, UpdateProfileInput, SentChannelPayload } from '@/types/Profile';
 import { getProfileRepository, type RepositoryResult } from '@/repositories/ProfileRepository';
-import { processTitle } from '@/types/ProfileUtils';
-import { getTwitchAPI, isAuthError, isNetworkError } from '@/lib/api/twitchAPI';
+import { getApplyHistoryRepository } from '@/repositories/ApplyHistoryRepository';
+import { processTitle, createApplyRecord } from '@/types/ProfileUtils';
+import { getTwitchAPI, isAuthError, isNetworkError, buildSentPayload, type APIResult } from '@/lib/api/twitchAPI';
+
+/**
+ * Record every apply attempt — success and failure — in the apply-history
+ * store. Success rows carry the exact wire payload; failed rows record what
+ * the apply would have sent plus the error (evidence of the attempt, offered
+ * with no actions downstream). A history failure must never mask the apply
+ * outcome, so it is logged rather than thrown — the same posture the API
+ * client uses for category caching.
+ */
+const recordApplyHistory = async (
+  profile: StreamProfile,
+  result: APIResult<SentChannelPayload>
+): Promise<void> => {
+  try {
+    const record = createApplyRecord({
+      profileId: profile.id,
+      profileName: profile.name,
+      payload: result.success && result.data ? result.data : buildSentPayload(profile),
+      source: 'apply',
+      result: result.success ? 'success' : 'failed',
+      ...(result.success
+        ? {}
+        : { error: result.error?.message || 'Failed to apply profile to stream' })
+    });
+
+    const appendResult = await getApplyHistoryRepository().append(record);
+    if (!appendResult.success) {
+      console.error('Failed to persist apply history record:', appendResult.error);
+    }
+  } catch (error) {
+    console.error('Unexpected failure recording apply history:', error);
+  }
+};
 
 /**
  * Loading state interface
@@ -217,7 +251,11 @@ export const useProfiles = () => {
     try {
       const twitchAPI = getTwitchAPI();
       const result = await twitchAPI.applyProfile(profile);
-      
+
+      // History records every attempt, success or failure, before the
+      // outcome is surfaced to the caller.
+      await recordApplyHistory(profile, result);
+
       if (result.success) {
         console.log(`Successfully applied profile "${profile.name}" to Twitch stream`);
         return true;
