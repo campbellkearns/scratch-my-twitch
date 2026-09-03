@@ -11,6 +11,7 @@ export default function Dashboard(): JSX.Element {
     error, 
     deleteProfile, 
     applyProfile,
+    refreshProfiles,
     clearError,
     isEmpty,
     profileCount 
@@ -45,6 +46,12 @@ export default function Dashboard(): JSX.Element {
     // Error handling is now managed by the useProfiles hook
   }
 
+  // C-2: the retry must re-run the load — clearing the error flag alone left
+  // a permanent "No profiles yet" state even when the data was there.
+  const handleTryAgain = () => {
+    refreshProfiles()
+  }
+
   // Loading state
   if (isLoading) {
     return (
@@ -69,7 +76,7 @@ export default function Dashboard(): JSX.Element {
           {error}
         </p>
         <button 
-          onClick={clearError}
+          onClick={handleTryAgain}
           className="scandi-btn"
         >
           Try Again
